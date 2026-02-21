@@ -1,80 +1,80 @@
-Index, Instance           , Category  , Distance              , Matched_Category, Matched_Index, Correct
-    0, CakeStrawberry     , STRAWBERRY, 0.006477816532817205  , OrangePeel      ,            76, False
-    1, DrivewayFoundation , Unique    , 0.0035177810644663847 , Gravel          ,            34, False
-    2, FabricSwatch1A     , Fabric    , 0.002735624571099337  , Gravel          ,            17, False
-    3, FabricSwatch1B     , Fabric    , 0.0038800860713077345 , Fabric          ,             9, True
-    4, FabricSwatch1C     , Fabric    , 0.00935842572703635   , Gravel          ,            24, False
-    5, FabricSwatch1D     , Fabric    , 0.0006612274772196722 , Velvet          ,            52, False
-    6, FabricSwatch1E     , Fabric    , 0.008939989187929414  , Fabric          ,             8, True
-    7, FabricSwatch1F     , Fabric    , 0.008375980308769949  , Grass           ,            40, False
-    8, FabricSwatch1G     , Fabric    , 0.004731898640489277  , Velvet          ,            52, False
-    9, FabricSwatch1H     , Fabric    , 0.0008232345227971978 , Velvet          ,            53, False
-   10, FabricSwatch2      , Fabric    , 0.0019779944991737174 , Wood            ,            72, False
-   11, GrassSwatchA       , Grass     , 0.0009437831228985221 , Gravel          ,            30, False
-   12, GrassSwatchB       , Grass     , 0.006001915599570304  , Grass           ,            74, True
-   13, GrassSwatchC       , Grass     , 0.004861043455914336  , Gravel          ,            34, False
-   14, GrassSwatchD       , Grass     , 0.0035238128006565036 , Gravel          ,            35, False
-   15, GrassSwatchE       , Grass     , 0.0009543035790969057 , Gravel          ,            31, False
-   16, GrassSwatchF       , Grass     , 0.05976590272459368   , STRAWB          ,            47, False
-   17, GravelDriveway1A   , Gravel    , 0.002735624571099337  , Fabric          ,             2, False
-   18, GravelDriveway1B   , Gravel    , 0.0005114370872650487 , Gravel          ,            27, True
-   19, GravelDriveway1C   , Gravel    , 0.0008390367015566776 , Gravel          ,            25, True
-   20, GravelDriveway1D   , Gravel    , 0.0002759430710560984 , Gravel          ,            28, True
-   21, GravelDriveway1F   , Grass     , 0.0006442013686780738 , Grass           ,            22, True
-   22, GravelDriveway1G   , Grass     , 0.00033285072161040445, Velvet          ,            50, False
-   23, GravelDriveway2A   , Gravel    , 0.00025272048838407434, Gravel          ,            25, True
-   24, GravelDriveway2B   , Gravel    , 0.0007705341249459622 , Gravel          ,            26, True
-   25, GravelDriveway2C   , Gravel    , 0.00025272048838407434, Gravel          ,            23, True
-   26, GravelDriveway2D   , Gravel    , 0.0007705341249459622 , Gravel          ,            24, True
-   27, GravelDriveway3A   , Gravel    , 0.0005114370872650487 , Gravel          ,            18, True
-   28, GravelDriveway3B   , Gravel    , 8.926989757629733e-05 , Gravel          ,            29, True
-   29, GravelDriveway3C   , Gravel    , 8.926989757629733e-05 , Gravel          ,            28, True
-   30, GravelDriveway4A   , Gravel    , 0.0009437831228985221 , Grass           ,            11, False
-   31, GravelDriveway4B   , Gravel    , 0.0009543035790969057 , Grass           ,            15, False
-   32, GravelDriveway4C   , Grass     , 0.0012948997713567454 , Velvet          ,            50, False
-   33, GravelSwatchA      , Gravel    , 0.000862701830568583  , Gravel          ,            35, True
-   34, GravelSwatchB      , Gravel    , 0.0014766629900480864 , Gravel          ,            33, True
-   35, GravelSwatchC      , Gravel    , 0.000862701830568583  , Gravel          ,            33, True
-   36, HIZOOMSWATCH       , STRAWB    , 0.04361553614589278   , STRAWB          ,            48, True
-   37, LawnA              , Grass     , 0.0006282831815540168 , Grass           ,            38, True
-   38, LawnB              , Grass     , 0.0006282831815540168 , Grass           ,            37, True
-   39, LawnC              , Grass     , 0.0004888574280712284 , Grass           ,            41, True
-   40, LawnD              , Grass     , 0.0003070198470618951 , Grass           ,            43, True
-   41, LawnE              , Grass     , 0.0004888574280712284 , Grass           ,            39, True
-   42, LawnF              , Grass     , 0.0005432088657451956 , Grass           ,            43, True
-   43, LawnG              , Grass     , 0.0003070198470618951 , Grass           ,            40, True
-   44, STRAWB-C           , STRAWBERRY, 0.0039299082065721485 , OrangePeel      ,            76, False
-   45, SWATCH             , GRASS     , 0.0                   , GRASS           ,            46, True
-   46, SWATCH             , GRASS     , 0.0                   , GRASS           ,            45, True
-   47, SWATCH             , STRAWB    , 0.004799067754951917  , STRAWBERRY      ,            44, False
-   48, SWATCH             , STRAWB    , 0.013517795540412755  , STRAWBERRY      ,             0, False
-   49, VelvetSwatchA      , Velvet    , 0.009094535073094016  , Grass           ,            22, False
-   50, VelvetSwatchB      , Velvet    , 0.00033285072161040445, Grass           ,            22, False
-   51, VelvetSwatchC      , Velvet    , 0.004809350709342414  , Wood            ,            58, False
-   52, VelvetSwatchD-Large, Velvet    , 0.0006612274772196722 , Fabric          ,             5, False
-   53, VelvetSwatchE-Large, Velvet    , 0.0008232345227971978 , Fabric          ,             9, False
-   54, WoodSwatch2A       , Wood      , 0.023809448461148144  , STRAWBERRY      ,             0, False
-   55, WoodSwatch2B       , Wood      , 0.03828858866816846   , Wood            ,            54, True
-   56, WoodSwatch2C       , Wood      , 0.0029423813410537156 , Wood            ,            61, True
-   57, WoodSwatchA        , Wood      , 0.0004952899561545117 , Wood            ,            62, True
-   58, WoodSwatchB        , Wood      , 0.0008036807500037568 , Wood            ,            61, True
-   59, WoodSwatchC        , Wood      , 0.0013234964665632728 , Wood            ,            64, True
-   60, WoodSwatchD        , Wood      , 0.0010014883084495357 , Wood            ,            69, True
-   61, WoodSwatchE        , Wood      , 0.0004182911923722167 , Wood            ,            71, True
-   62, WoodSwatchF        , Wood      , 0.0004952899561545117 , Wood            ,            57, True
-   63, WoodSwatchG        , Wood      , 0.00019370198571315922, Wood            ,            64, True
-   64, WoodSwatchH        , Wood      , 0.00019370198571315922, Wood            ,            63, True
-   65, WoodSwatchI        , Wood      , 0.0002614722515617967 , Wood            ,            63, True
-   66, WoodSwatchJ        , Wood      , 0.0003783786299159874 , Wood            ,            65, True
-   67, WoodSwatchK        , Wood      , 0.000503187176938817  , Wood            ,            70, True
-   68, WoodSwatchL        , Wood      , 0.000504903906211363  , Wood            ,            69, True
-   69, WoodSwatchM        , Wood      , 0.000504903906211363  , Wood            ,            68, True
-   70, WoodSwatchN        , Wood      , 0.000503187176938817  , Wood            ,            67, True
-   71, WoodSwatchO        , Wood      , 0.0004182911923722167 , Wood            ,            61, True
-   72, WoodSwatchP        , Wood      , 0.0007894961314509892 , Wood            ,            57, True
-   73, YardA              , Grass     , 0.0005847082585764673 , Grass           ,            74, True
-   74, YardB              , Grass     , 0.0005847082585764673 , Grass           ,            73, True
-   75, YardC              , Grass     , 0.0020843944338866504 , Gravel          ,            31, False
-   76, ZoomedOrange2      , OrangePeel, 0.0039299082065721485 , STRAWBERRY      ,            44, False
-   77, ZoomedOrange3      , OrangePeel, 0.008857688033361682  , STRAWBERRY      ,             0, False
-   78, ZoomedOrange       , OrangePeel, 0.0020028261198813072 , Wood            ,            70, False
+Index,Instance,Category,Distance,Matched_Category,Matched_Index,Correct
+0,CakeStrawberry,STRAWBERRY,0.008441417123853504,OrangePeel,76,False
+1,DrivewayFoundation,Unique,0.007108613101716274,Gravel,35,False
+2,FabricSwatch1A,Fabric,0.0036743901767131155,Gravel,17,False
+3,FabricSwatch1B,Fabric,0.00551292585103819,Fabric,9,True
+4,FabricSwatch1C,Fabric,0.011017445322770082,Gravel,24,False
+5,FabricSwatch1D,Fabric,0.0009062654945356263,Velvet,52,False
+6,FabricSwatch1E,Fabric,0.011807129467371603,GRASS,45,False
+7,FabricSwatch1F,Fabric,0.010615142100569918,Grass,40,False
+8,FabricSwatch1G,Fabric,0.006022905771426718,Gravel,23,False
+9,FabricSwatch1H,Fabric,0.0011299970973510855,Velvet,53,False
+10,FabricSwatch2,Fabric,0.0034916609483269688,Wood,72,False
+11,GrassSwatchA,Grass,0.0015143050113220248,Gravel,30,False
+12,GrassSwatchB,Grass,0.007096346657410416,Grass,74,True
+13,GrassSwatchC,Grass,0.0059563196569645885,Gravel,34,False
+14,GrassSwatchD,Grass,0.0037908933232534223,Gravel,35,False
+15,GrassSwatchE,Grass,0.0015630233772764516,Velvet,52,False
+16,GrassSwatchF,Grass,0.06316980449938436,STRAWB,47,False
+17,GravelDriveway1A,Gravel,0.0036743901767131155,Fabric,2,False
+18,GravelDriveway1B,Gravel,0.0008402427636720271,Gravel,27,True
+19,GravelDriveway1C,Gravel,0.001075743684616975,Gravel,25,True
+20,GravelDriveway1D,Gravel,0.00048522607167572434,Gravel,28,True
+21,GravelDriveway1F,Grass,0.0016709409450415865,Grass,22,True
+22,GravelDriveway1G,Grass,0.0016709409450415865,Grass,21,True
+23,GravelDriveway2A,Gravel,0.0003718913571653882,Gravel,25,True
+24,GravelDriveway2B,Gravel,0.0011441524552547075,Gravel,26,True
+25,GravelDriveway2C,Gravel,0.0003718913571653882,Gravel,23,True
+26,GravelDriveway2D,Gravel,0.0011441524552547075,Gravel,24,True
+27,GravelDriveway3A,Gravel,0.0008402427636720271,Gravel,18,True
+28,GravelDriveway3B,Gravel,0.00011134551373181907,Gravel,29,True
+29,GravelDriveway3C,Gravel,0.00011134551373181907,Gravel,28,True
+30,GravelDriveway4A,Gravel,0.0014452419468443515,Gravel,31,True
+31,GravelDriveway4B,Gravel,0.0014452419468443515,Gravel,30,True
+32,GravelDriveway4C,Grass,0.0020889327365868717,Velvet,50,False
+33,GravelSwatchA,Gravel,0.0014807162511097335,Gravel,35,True
+34,GravelSwatchB,Gravel,0.0016113113535349338,Gravel,33,True
+35,GravelSwatchC,Gravel,0.0014807162511097335,Gravel,33,True
+36,HIZOOMSWATCH,STRAWB,0.05428109966443963,STRAWB,48,True
+37,LawnA,Grass,0.0015929202684429582,Grass,38,True
+38,LawnB,Grass,0.0015929202684429582,Grass,37,True
+39,LawnC,Grass,0.0007724782672368152,Grass,41,True
+40,LawnD,Grass,0.0005268967257578508,Grass,43,True
+41,LawnE,Grass,0.0007724782672368152,Grass,39,True
+42,LawnF,Grass,0.0015257776310913303,Grass,43,True
+43,LawnG,Grass,0.0005268967257578508,Grass,40,True
+44,STRAWB-C,STRAWBERRY,0.00687223525684133,OrangePeel,76,False
+45,SWATCH,GRASS,0.0,GRASS,46,True
+46,SWATCH,GRASS,0.0,GRASS,45,True
+47,SWATCH,STRAWB,0.008392967012918433,OrangePeel,76,False
+48,SWATCH,STRAWB,0.01701551969668041,STRAWBERRY,0,False
+49,VelvetSwatchA,Velvet,0.014530017422853803,Grass,22,False
+50,VelvetSwatchB,Velvet,0.0016719257883354747,Grass,22,False
+51,VelvetSwatchC,Velvet,0.007375214032428501,Wood,61,False
+52,VelvetSwatchD-Large,Velvet,0.0009062654945356263,Fabric,5,False
+53,VelvetSwatchE-Large,Velvet,0.0011299970973510855,Fabric,9,False
+54,WoodSwatch2A,Wood,0.0434476830758202,Wood,55,True
+55,WoodSwatch2B,Wood,0.0434476830758202,Wood,54,True
+56,WoodSwatch2C,Wood,0.005106741226311804,Wood,65,True
+57,WoodSwatchA,Wood,0.00048822808805336934,Wood,62,True
+58,WoodSwatchB,Wood,0.001108992845927542,Wood,71,True
+59,WoodSwatchC,Wood,0.0015815414990978732,Wood,60,True
+60,WoodSwatchD,Wood,0.00115325478199698,Wood,69,True
+61,WoodSwatchE,Wood,0.0005340581023153772,Wood,71,True
+62,WoodSwatchF,Wood,0.00048822808805336934,Wood,57,True
+63,WoodSwatchG,Wood,0.000336375399263397,Wood,64,True
+64,WoodSwatchH,Wood,0.000336375399263397,Wood,63,True
+65,WoodSwatchI,Wood,0.0004403329047587272,Wood,66,True
+66,WoodSwatchJ,Wood,0.0004403329047587272,Wood,65,True
+67,WoodSwatchK,Wood,0.0005957052909719529,Wood,70,True
+68,WoodSwatchL,Wood,0.0009786888233442798,Wood,69,True
+69,WoodSwatchM,Wood,0.0009786888233442798,Wood,68,True
+70,WoodSwatchN,Wood,0.0005957052909719529,Wood,67,True
+71,WoodSwatchO,Wood,0.0005340581023153772,Wood,61,True
+72,WoodSwatchP,Wood,0.0009645530953375043,Wood,67,True
+73,YardA,Grass,0.0006554524709810856,Grass,74,True
+74,YardB,Grass,0.0006554524709810856,Grass,73,True
+75,YardC,Grass,0.0025964099436248116,Gravel,31,False
+76,ZoomedOrange2,OrangePeel,0.00687223525684133,STRAWBERRY,44,False
+77,ZoomedOrange3,OrangePeel,0.015946392880805665,STRAWBERRY,0,False
+78,ZoomedOrange,OrangePeel,0.0026553184216617804,Wood,70,False

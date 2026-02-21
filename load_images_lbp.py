@@ -14,7 +14,7 @@ def parse_filename(filename: str) -> Dict[str, str]:
 
     Returns a dict with keys: INSTANCE, CATEGORY, DISTANCE, ROTATION, LIGHTING
     """
-    print("Parsing filename:", filename)
+    #print("Parsing filename:", filename)
     name = os.path.splitext(os.path.basename(filename))[0]
     parts = name.split("_")
     if len(parts) < 5:
@@ -170,13 +170,13 @@ def main():
     items = load_images_from_folder(args.folder, P=args.P, R=args.R, method=args.method)
     # compute nearest matches (adds `DISTANCE` and `MATCHED_CATEGORY` to each item)
     compute_nearest_matches(items)
-    print(f"Loaded {len(items)} images from {args.folder}")
+    #print(f"Loaded {len(items)} images from {args.folder}")
     if items:
         first = items[0]
-        print("Example metadata:")
-        print({k: first[k] for k in ["INSTANCE", "CATEGORY", "DISTANCE", "ROTATION", "LIGHTING"]})
-        print("LBP shape:", first['LBP'].shape)
-        print(f"LBP parameters: P={args.P}, R={args.R}, method={args.method}")
+        #print("Example metadata:")
+        #print({k: first[k] for k in ["INSTANCE", "CATEGORY", "DISTANCE", "ROTATION", "LIGHTING"]})
+        #print("LBP shape:", first['LBP'].shape)
+        #print(f"LBP parameters: P={args.P}, R={args.R}, method={args.method}")
     if args.save_csv:
         out_path = args.save_csv
         with open(out_path, 'w', newline='', encoding='utf-8') as f:
@@ -200,6 +200,12 @@ def main():
             print("Could not import or run visualization:", e)
         else:
             visualize_matches(items)
+    # print overall accuracy (percentage of items with CORRECT == True)
+    total = len(items)
+    if total > 0:
+        correct_count = sum(1 for it in items if bool(it.get('CORRECT')))
+        pct = 100.0 * correct_count / total
+        print(f"Correct matches: {correct_count}/{total} ({pct:.2f}%)")
 
 
 if __name__ == '__main__':
