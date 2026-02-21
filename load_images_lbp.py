@@ -53,7 +53,8 @@ def local_binary_pattern(image: np.ndarray, P: int = 8, R: float = 1.0, method: 
     return lbp.astype(np.uint32)
 
 
-def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str = 'uniform', X: int = None, Y: int = None) -> List[Dict]:
+def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str = 'uniform', X: int = None, Y: int = None, 
+                            use_gray_image: bool = False) -> List[Dict]:
     """Load all .png images from `folder`, parse filename metadata, compute LBP.
 
     Returns a list of dictionaries. Each dict has keys:
@@ -87,6 +88,11 @@ def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str
                     x_start = (w - X) // 2
                     y_start = (h - Y) // 2
                     arr = arr[y_start:y_start+Y, x_start:x_start+X]
+                    if use_gray_image:
+                        image_copy = image_copy.crop((x_start, y_start, x_start + X, y_start + Y)).convert('L')
+                    else:
+                        image_copy = image_copy.crop((x_start, y_start, x_start + X, y_start + Y))
+
         except Exception as e:
             # skip unreadable images
             continue
@@ -177,8 +183,10 @@ def main():
     parser.add_argument('--visualize', action='store_true', help='Open interactive visualization of matches')
     parser.add_argument('--X', type=int, default=None, help='Width of centermost region for LBP (optional)')
     parser.add_argument('--Y', type=int, default=None, help='Height of centermost region for LBP (optional)')
+    parser.add_argument('--V', action="store_true", help='Print verbose output')
+    parser.add_argument('--G', action="store_true", help='Use grayscale image in visualization')
     args = parser.parse_args()
-    items = load_images_from_folder(args.folder, P=args.P, R=args.R, method=args.method, X=args.X, Y=args.Y)
+    items = load_images_from_folder(args.folder, P=args.P, R=args.R, method=args.method, X=args.X, Y=args.Y, use_gray_image=args.G)
     # compute nearest matches (adds `DISTANCE` and `MATCHED_CATEGORY` to each item)
     compute_nearest_matches(items)
     #print(f"Loaded {len(items)} images from {args.folder}")
@@ -216,6 +224,11 @@ def main():
     if total > 0:
         correct_count = sum(1 for it in items if bool(it.get('CORRECT')))
         pct = 100.0 * correct_count / total
+
+    if args.V:
+        for item in items:
+            print(f"Instance: {item['INSTANCE']}, Category: {item['CATEGORY']}, Distance: {item['DISTANCE']}, Matched Category: {item['MATCHED_CATEGORY']}, Correct: {item['CORRECT']}")
+            print (f"LBP Histogram: {item["LBP"]}\n")
         print(f"Correct matches: {correct_count}/{total} ({pct:.2f}%)")
 
 
