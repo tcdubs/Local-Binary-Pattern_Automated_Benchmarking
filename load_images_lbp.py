@@ -5,6 +5,7 @@ from typing import List, Dict
 import numpy as np
 from PIL import Image
 from skimage.feature import local_binary_pattern as skimage_lbp
+from chi2_distance import chi2_distance
 
 
 def parse_filename(filename: str) -> Dict[str, str]:
@@ -89,6 +90,51 @@ def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str
         results.append(data)
 
     return results
+
+
+def compute_nearest_matches(items: List[Dict]) -> None:
+    """For each item in `items`, compute histogram of its LBP codes and find
+    the nearest other image by chi-squared distance. Stores results in-place
+    under keys `DISTANCE` (float) and `MATCHED_CATEGORY` (str).
+    """
+    if not items:
+        return
+
+    lbps = [it['LBP'] for it in items]
+    # determine consistent histogram length across images
+    max_code = 0
+    for lb in lbps:
+        if lb.size:
+            max_code = max(max_code, int(lb.max()))
+    bins = max_code + 1
+
+    hists = []
+    for lb in lbps:
+        hist = np.bincount(lb.ravel(), minlength=bins).astype(np.float64)
+        s = hist.sum()
+        if s > 0:
+            hist /= s
+        hists.append(hist)
+
+    n = len(items)
+    for i in range(n):
+        if n == 1:
+            items[i]['DISTANCE'] = None
+            items[i]['MATCHED_CATEGORY'] = None
+            continue
+
+        min_val = float('inf')
+        min_idx = -1
+        for j in range(n):
+            if i == j:
+                continue
+            d = chi2_distance(hists[i], hists[j])
+            if d < min_val:
+                min_val = d
+                min_idx = j
+
+        items[i]['DISTANCE'] = None if min_idx == -1 else float(min_val)
+        items[i]['MATCHED_CATEGORY'] = None if min_idx == -1 else items[min_idx].get('CATEGORY')
 
 
 def main():
