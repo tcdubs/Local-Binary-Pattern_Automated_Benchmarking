@@ -150,6 +150,11 @@ def compute_nearest_matches(items: List[Dict]) -> None:
         items[i]['MATCHED_CATEGORY'] = None if min_idx == -1 else items[min_idx].get('CATEGORY')
         items[i]['INDEX'] = i
         items[i]['MATCHED_INDEX'] = min_idx
+        # mark whether the matched category equals the item's category
+        if min_idx == -1:
+            items[i]['CORRECT'] = False
+        else:
+            items[i]['CORRECT'] = (items[i].get('CATEGORY') == items[min_idx].get('CATEGORY'))
 
 
 def main():
@@ -176,7 +181,7 @@ def main():
         out_path = args.save_csv
         with open(out_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Index", "Instance", "Category", "Distance", "Matched_Category", "Matched_Index"])
+            writer.writerow(["Index", "Instance", "Category", "Distance", "Matched_Category", "Matched_Index", "Correct"])
             for it in items:
                 writer.writerow([
                     it.get('INDEX'),
@@ -185,6 +190,7 @@ def main():
                     it.get('DISTANCE'),
                     it.get('MATCHED_CATEGORY'),
                     it.get('MATCHED_INDEX'),
+                    bool(it.get('CORRECT')),
                 ])
         print(f"Saved matches CSV to {out_path}")
     if args.visualize:
