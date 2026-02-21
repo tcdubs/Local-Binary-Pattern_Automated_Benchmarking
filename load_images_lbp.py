@@ -225,11 +225,23 @@ def main():
         correct_count = sum(1 for it in items if bool(it.get('CORRECT')))
         pct = 100.0 * correct_count / total
 
+    lowest_incorrect_match_distance = float('inf')
+    highest_correct_match_distance = float('-inf')
+    for item in items:
+        if bool(item.get('CORRECT')):
+            if item.get('DISTANCE') is not None and item.get('DISTANCE') > highest_correct_match_distance:
+                highest_correct_match_distance = item.get('DISTANCE')
+        else:
+            if item.get('DISTANCE') is not None and item.get('DISTANCE') < lowest_incorrect_match_distance:
+                lowest_incorrect_match_distance = item.get('DISTANCE')
+
     if args.V:
         for item in items:
             print(f"Instance: {item['INSTANCE']}, Category: {item['CATEGORY']}, Distance: {item['DISTANCE']}, Matched Category: {item['MATCHED_CATEGORY']}, Correct: {item['CORRECT']}")
             print (f"LBP Histogram: {item["LBP"]}\n")
         print(f"Correct matches: {correct_count}/{total} ({pct:.2f}%)")
+        print(f"Highest distance among correct matches: {highest_correct_match_distance:.6f}")
+        print(f"Lowest distance among incorrect matches: {lowest_incorrect_match_distance:.6f}")
 
 
 if __name__ == '__main__':

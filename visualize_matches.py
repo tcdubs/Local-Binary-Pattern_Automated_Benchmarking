@@ -88,6 +88,7 @@ def visualize_matches(items: List[Dict], max_size: int = 300) -> None:
             matched = None
 
         distance = it.get('DISTANCE')
+        dist_metric = f"Distance Metric: Chi Squared"
         dist_line = f"Distance: {distance:.6f}" if (distance is not None and not isinstance(distance, str)) else f"Distance: {distance}"
 
         info_lines = []
@@ -101,6 +102,7 @@ def visualize_matches(items: List[Dict], max_size: int = 300) -> None:
         else:
             info_lines.append('(no match)')
         info_lines.append("")
+        info_lines.append(dist_metric)
         info_lines.append(dist_line)
 
         info_text = "\n".join(info_lines)
