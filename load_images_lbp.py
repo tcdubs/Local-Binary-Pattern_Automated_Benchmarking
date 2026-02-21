@@ -2,6 +2,7 @@ import os
 import argparse
 from typing import List, Dict
 
+import csv
 import numpy as np
 from PIL import Image
 from skimage.feature import local_binary_pattern as skimage_lbp
@@ -13,6 +14,7 @@ def parse_filename(filename: str) -> Dict[str, str]:
 
     Returns a dict with keys: INSTANCE, CATEGORY, DISTANCE, ROTATION, LIGHTING
     """
+    print("Parsing filename:", filename)
     name = os.path.splitext(os.path.basename(filename))[0]
     parts = name.split("_")
     if len(parts) < 5:
@@ -61,6 +63,7 @@ def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str
     results: List[Dict] = []
     for fname in sorted(os.listdir(folder)):
         if not fname.lower().endswith('.png'):
+            print("Skipping non-PNG file:", fname)
             continue
         path = os.path.join(folder, fname)
         try:
@@ -71,8 +74,10 @@ def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str
 
         try:
             with Image.open(path) as im:
-                gray = im.convert('L')
+                rgb = im.convert('RGB')
+                gray = rgb.convert('L')
                 arr = np.array(gray)
+                image_copy = rgb.copy()
         except Exception as e:
             # skip unreadable images
             continue
@@ -85,38 +90,46 @@ def load_images_from_folder(folder: str, P: int = 8, R: float = 1.0, method: str
             "DISTANCE": meta["DISTANCE"],
             "ROTATION": meta["ROTATION"],
             "LIGHTING": meta["LIGHTING"],
-            "LBP": lbp,
+            # temporarily store the 2D LBP array; will convert to histogram below
+            "_LBP_ARRAY": lbp,
+            # store the original loaded image (PIL.Image)
+            "IMAGE": image_copy,
         }
         results.append(data)
+
+    # Convert stored LBP arrays to normalized histograms and replace key with `LBP`
+    max_code = 0
+    for it in results:
+        lb = it.get("_LBP_ARRAY")
+        if lb is not None and lb.size:
+            max_code = max(max_code, int(lb.max()))
+    bins = max_code + 1
+
+    for it in results:
+        lb = it.pop("_LBP_ARRAY", None)
+        if lb is None:
+            hist = np.zeros(bins, dtype=np.float64)
+        else:
+            hist = np.bincount(lb.ravel(), minlength=bins).astype(np.float64)
+            s = hist.sum()
+            if s > 0:
+                hist /= s
+        it["LBP"] = hist
 
     return results
 
 
 def compute_nearest_matches(items: List[Dict]) -> None:
-    """For each item in `items`, compute histogram of its LBP codes and find
-    the nearest other image by chi-squared distance. Stores results in-place
+    """For each item in `items`, find the nearest other image by chi-squared
+    distance using the precomputed `LBP` histograms. Stores results in-place
     under keys `DISTANCE` (float) and `MATCHED_CATEGORY` (str).
     """
     if not items:
         return
 
-    lbps = [it['LBP'] for it in items]
-    # determine consistent histogram length across images
-    max_code = 0
-    for lb in lbps:
-        if lb.size:
-            max_code = max(max_code, int(lb.max()))
-    bins = max_code + 1
+    hists = [np.asarray(it['LBP'], dtype=np.float64) for it in items]
+    n = len(hists)
 
-    hists = []
-    for lb in lbps:
-        hist = np.bincount(lb.ravel(), minlength=bins).astype(np.float64)
-        s = hist.sum()
-        if s > 0:
-            hist /= s
-        hists.append(hist)
-
-    n = len(items)
     for i in range(n):
         if n == 1:
             items[i]['DISTANCE'] = None
@@ -135,6 +148,8 @@ def compute_nearest_matches(items: List[Dict]) -> None:
 
         items[i]['DISTANCE'] = None if min_idx == -1 else float(min_val)
         items[i]['MATCHED_CATEGORY'] = None if min_idx == -1 else items[min_idx].get('CATEGORY')
+        items[i]['INDEX'] = i
+        items[i]['MATCHED_INDEX'] = min_idx
 
 
 def main():
@@ -144,9 +159,12 @@ def main():
     parser.add_argument('--R', type=float, default=1.0, help='Radius for LBP (default: 1.0)')
     parser.add_argument('--method', type=str, default='uniform', choices=['default', 'ror', 'uniform', 'var'],
                         help="LBP method for skimage.feature.local_binary_pattern (default: 'uniform')")
+    parser.add_argument('--save-csv', type=str, default=None, help='Path to write matches CSV (optional)')
+    parser.add_argument('--visualize', action='store_true', help='Open interactive visualization of matches')
     args = parser.parse_args()
-
     items = load_images_from_folder(args.folder, P=args.P, R=args.R, method=args.method)
+    # compute nearest matches (adds `DISTANCE` and `MATCHED_CATEGORY` to each item)
+    compute_nearest_matches(items)
     print(f"Loaded {len(items)} images from {args.folder}")
     if items:
         first = items[0]
@@ -154,6 +172,28 @@ def main():
         print({k: first[k] for k in ["INSTANCE", "CATEGORY", "DISTANCE", "ROTATION", "LIGHTING"]})
         print("LBP shape:", first['LBP'].shape)
         print(f"LBP parameters: P={args.P}, R={args.R}, method={args.method}")
+    if args.save_csv:
+        out_path = args.save_csv
+        with open(out_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Index", "Instance", "Category", "Distance", "Matched_Category", "Matched_Index"])
+            for it in items:
+                writer.writerow([
+                    it.get('INDEX'),
+                    it.get('INSTANCE'),
+                    it.get('CATEGORY'),
+                    it.get('DISTANCE'),
+                    it.get('MATCHED_CATEGORY'),
+                    it.get('MATCHED_INDEX'),
+                ])
+        print(f"Saved matches CSV to {out_path}")
+    if args.visualize:
+        try:
+            from visualize_matches import visualize_matches
+        except Exception as e:
+            print("Could not import or run visualization:", e)
+        else:
+            visualize_matches(items)
 
 
 if __name__ == '__main__':
