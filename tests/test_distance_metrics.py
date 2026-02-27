@@ -1,10 +1,9 @@
-# test_chi2_distance.py
+
 import math
 import unittest
 
 import numpy as np
 
-# Adjust import if your module name/path differs
 from automated_lbp_benchmarking.distance_metrics import (
     ChiSquareDistance,
     CosineDistance,
@@ -20,20 +19,16 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
         self.cos = CosineDistance()
         self.hel = HellingerDistance()
 
-        # A few handy histograms (non-negative)
         self.a = np.array([0.0, 1.0, 2.0, 3.0])
         self.b = np.array([0.0, 2.0, 1.0, 4.0])
-        self.c = np.array([5.0, 0.0, 0.0, 0.0])  # sparse / one-hot-ish
+        self.c = np.array([5.0, 0.0, 0.0, 0.0])  
         self.zeros = np.zeros(4, dtype=float)
-
-    # ---------- Shared invariants / input validation ----------
 
     def test_identical_vectors_distance_zero(self):
         for metric in (self.chi2, self.cos, self.hel):
             self.assertAlmostEqual(metric(self.a, self.a), 0.0, places=12)
 
     def test_symmetry(self):
-        # D(a,b) == D(b,a) for these implementations
         for metric in (self.chi2, self.cos, self.hel):
             dab = metric(self.a, self.b)
             dba = metric(self.b, self.a)
@@ -54,7 +49,6 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
                 metric(a, b)
 
     def test_outputs_are_finite(self):
-        # Should never return NaN/Inf for valid inputs
         for metric in (self.chi2, self.cos, self.hel):
             val = metric(self.a, self.b)
             self.assertTrue(math.isfinite(val))
@@ -75,12 +69,11 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
         self.assertAlmostEqual(self.chi2(a, b), float(manual), places=12)
 
     def test_chi2_wrapper_matches_class(self):
-        # chi2_distance() wraps ChiSquareDistance(epsilon=epsilon)(a,b)
+
         a = [0, 1, 2, 3]
         b = [0, 2, 1, 4]
         self.assertAlmostEqual(chi2_distance(a, b), self.chi2(a, b), places=12)
 
-        # also verify custom epsilon changes are respected
         epsilon = 1e-6
         self.assertAlmostEqual(
             chi2_distance(a, b, epsilon=epsilon),
@@ -98,7 +91,7 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
             self.assertLessEqual(d, 1.0)
 
     def test_cosine_all_zero_both_returns_zero(self):
-        # If both norms are ~0 => return 0.0
+        # If both norms are about 0 => return 0.0
         self.assertEqual(self.cos(self.zeros, self.zeros), 0.0)
 
     def test_cosine_one_zero_other_nonzero_returns_one(self):
@@ -107,7 +100,7 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
         self.assertEqual(self.cos(self.a, self.zeros), 1.0)
 
     def test_cosine_scaling_invariance(self):
-        # Scaling either vector by positive constant does not change cosine distance
+        # Scaling either vector by positive constant doesnt change cosine distance
         d1 = self.cos(self.a, self.b)
         d2 = self.cos(10.0 * self.a, self.b)
         d3 = self.cos(self.a, 0.1 * self.b)
@@ -117,24 +110,19 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
     # ---------- Hellinger distance specifics ----------
 
     def test_hellinger_range(self):
-        # Hellinger distance is bounded in [0,1] in this normalized form
         for x, y in ((self.a, self.b), (self.a, self.c), (self.c, self.b)):
             d = self.hel(x, y)
             self.assertGreaterEqual(d, 0.0)
             self.assertLessEqual(d, 1.0)
 
     def test_hellinger_both_zero_sums_returns_zero(self):
-        # If both sums are ~0 => return 0.0
         self.assertEqual(self.hel(self.zeros, self.zeros), 0.0)
 
     def test_hellinger_one_zero_sum_other_nonzero_returns_one(self):
-        # If one sum is ~0 and the other isn't => return 1.0
         self.assertEqual(self.hel(self.zeros, self.a), 1.0)
         self.assertEqual(self.hel(self.a, self.zeros), 1.0)
 
     def test_hellinger_scaling_invariance_due_to_normalization(self):
-        # Hellinger normalizes to distributions p=a/sum(a), q=b/sum(b),
-        # so positive scaling should not change the result.
         d1 = self.hel(self.a, self.b)
         d2 = self.hel(10.0 * self.a, self.b)
         d3 = self.hel(self.a, 0.1 * self.b)
@@ -144,13 +132,11 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
     # ---------- Registry / factory behavior ----------
 
     def test_get_distance_metric_known_names(self):
-        # Exact names
         self.assertEqual(get_distance_metric("chi2").name, "chi2")
         self.assertEqual(get_distance_metric("cosine").name, "cosine")
         self.assertEqual(get_distance_metric("hellinger").name, "hellinger")
 
     def test_get_distance_metric_aliases(self):
-        # Aliases for chi2
         self.assertEqual(get_distance_metric("chisq").name, "chi2")
         self.assertEqual(get_distance_metric("chi-square").name, "chi2")
 
