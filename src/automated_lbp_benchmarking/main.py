@@ -14,9 +14,6 @@ from skimage.feature import local_binary_pattern as skimage_lbp
 from .visualize_matches_mvc import visualize_matches
 
 from .distance_metrics import chi2_distance, get_distance_metric
-# ----------------------------
-# Domain model
-# ----------------------------
 
 @dataclass
 class ImageRecord:
@@ -90,7 +87,7 @@ def center_crop_pil(im: Image.Image, X: int, Y: int) -> Image.Image:
 
 
 # ----------------------------
-# Facade / Wrapper
+# LBF Facade
 # ----------------------------
 
 @dataclass(frozen=True)
@@ -114,7 +111,7 @@ class LBPFacade:
 
 
 # ----------------------------
-# Adapter
+# Hist Adapter
 # ----------------------------
 
 @dataclass(frozen=True)
@@ -135,7 +132,7 @@ class LBPHistogramAdapter:
 
 
 # ----------------------------
-# Pipeline stages
+# THE PIPELINE
 # ----------------------------
 
 class Stage:
@@ -265,7 +262,7 @@ class NearestNeighborMatcher(Stage):
 
 
 # ----------------------------
-# Orchestration
+# Pipeline BEGINS
 # ----------------------------
 
 @dataclass
@@ -281,7 +278,7 @@ class Pipeline:
 
 
 # ----------------------------
-# Outputs / reporting
+# Results and visualization
 # ----------------------------
 
 def save_matches_csv(records: Sequence[ImageRecord], out_path: str) -> None:
@@ -340,7 +337,7 @@ def print_verbose_report(records: Sequence[ImageRecord]) -> None:
 
 
 # ----------------------------
-# CLI
+# CLI STUFF
 # ----------------------------
 
 def main() -> None:
