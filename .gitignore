@@ -21,6 +21,7 @@ dist/
 # OS junk
 .DS_Store
 Thumbs.db
+LBP_Test_Images/*
 
 # Testing / coverage
 .coverage

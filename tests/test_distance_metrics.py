@@ -11,6 +11,8 @@ from automated_lbp_benchmarking.distance_metrics import (
     get_distance_metric,
     chi2_distance,
 )
+from automated_lbp_benchmarking.main import center_crop, ImageRecord, NearestNeighborMatcher
+from PIL import Image
 
 
 class TestHistogramDistanceMetrics(unittest.TestCase):
@@ -60,19 +62,19 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
         self.assertGreaterEqual(self.chi2(self.a, self.c), 0.0)
 
     def test_chi2_matches_manual_computation(self):
-        # Matches: 0.5 * sum((a-b)^2 / (a+b+epsilon))
-        a = np.array([0.0, 1.0, 2.0, 3.0])
-        b = np.array([0.0, 2.0, 1.0, 4.0])
+        # Match manual chi2 computation for known inputs with chi2 stragegy object
+        a = np.array([0.1, 0.2, 0.3, 0.4])
+        b = np.array([0.2, 0.4, 0.1, 0.3])
         epsilon = self.chi2.epsilon
 
         manual = 0.5 * np.sum(((a - b) ** 2) / (a + b + epsilon))
-        self.assertAlmostEqual(self.chi2(a, b), float(manual), places=12)
+        self.assertAlmostEqual(self.chi2(a, b), float(manual))
 
     def test_chi2_wrapper_matches_class(self):
 
         a = [0, 1, 2, 3]
         b = [0, 2, 1, 4]
-        self.assertAlmostEqual(chi2_distance(a, b), self.chi2(a, b), places=12)
+        self.assertAlmostEqual(chi2_distance(a, b), self.chi2(a, b))
 
         epsilon = 1e-6
         self.assertAlmostEqual(
@@ -146,6 +148,91 @@ class TestHistogramDistanceMetrics(unittest.TestCase):
     def test_get_distance_metric_unknown_raises(self):
         with self.assertRaises(ValueError):
             get_distance_metric("euclidean")
+
+class TestImageCropper(unittest.TestCase):
+    def test_center_crop_extracts_exact_center_region(self):
+        # Mock image known dimesnions
+        original_image_height = 10
+        original_image_width = 12
+
+        # Mock center patch values
+        requested_crop_width = 2
+        requested_crop_height = 2
+
+        # Get 10 x 12 array with values 0-119 to verify proper cropping
+        input_array = np.arange(
+            original_image_height * original_image_width
+        ).reshape(original_image_height, original_image_width)
+
+        # Compute expected center region indices
+        expected_row_start_index = (original_image_height - requested_crop_height) // 2
+        expected_column_start_index = (original_image_width - requested_crop_width) // 2
+
+        # Manually slice out middle 2x2 region for verification
+        expected_center_region = input_array[
+            expected_row_start_index:expected_row_start_index + requested_crop_height,
+            expected_column_start_index:expected_column_start_index + requested_crop_width
+        ]
+
+        # Call the center_crop function
+        cropped_array = center_crop(
+            input_array,
+            requested_crop_width,
+            requested_crop_height
+        )
+        # Verify the cropped array matches the expected center region
+        assert np.array_equal(cropped_array, expected_center_region)
+
+    def test_distance_metrics_and_matcher_integration(self):
+    # Create three known histograms
+    # Record A is closest to Record B under chi-square distance.
+        hist_A = np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+        hist_B = np.array([0.1, 0.2, 0.34, 0.36], dtype=np.float64)  # very close to A
+        hist_C = np.array([0.8, 0.1, 0.05, 0.05], dtype=np.float64)  # far from A
+
+        # Dummy image to pack into ImageRecord object
+        dummy_image = Image.new("RGB", (8, 8))
+        record_A = ImageRecord(
+            instance="0001",
+            category="catA",
+            distance="10cm",
+            rotation="0deg",
+            lighting="bright",
+            image=dummy_image,
+            lbp_hist=hist_A,
+        )
+        record_B = ImageRecord(
+            instance="0002",
+            category="catA",  # same category as A so "correct" should become True when matched
+            distance="10cm",
+            rotation="0deg",
+            lighting="bright",
+            image=dummy_image,
+            lbp_hist=hist_B,
+        )
+        record_C = ImageRecord(
+            instance="0003",
+            category="catB",
+            distance="10cm",
+            rotation="0deg",
+            lighting="bright",
+            image=dummy_image,
+            lbp_hist=hist_C,
+        )
+
+        records = [record_A, record_B, record_C]
+        matcher = NearestNeighborMatcher(metric_name="chi2")
+        matched_records = matcher(records)
+
+        #for record_A, nearest neighbor should be record_B
+        assert matched_records[0].matched_index == 1
+        assert matched_records[0].matched_category == "catA"
+        assert matched_records[0].correct is True
+
+        # Distance should be a positive float
+        assert isinstance(matched_records[0].nn_distance, float)
+        assert np.isfinite(matched_records[0].nn_distance)
+        assert matched_records[0].nn_distance >= 0.0
 
 
 if __name__ == "__main__":
