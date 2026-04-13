@@ -183,7 +183,7 @@ class ImageFolderLoader:
                 with Image.open(path) as im:
                     rgb = im.convert("RGB")
                     gray = rgb.convert("L")
-                    gray_arr = np.array(gray)
+                    gray_arr = np.array(gray, dtype=np.float32)
 
                     viz_img = rgb.copy()
 
