@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -112,15 +111,15 @@ class LBPFacade:
     P: int = 8
     R: float = 1.0
     method: str = "uniform"
-    use_ltp: bool = False
+    ltp_threshold: int | None = None
 
     def __call__(self, gray_2d: np.ndarray) -> np.ndarray:
         if gray_2d.ndim != 2:
             raise ValueError("LBP input must be a 2D grayscale array")
 
-        if self.use_ltp:
-            # For testing: return a simple pattern based on pixel intensity
-            lbp_codes: LTPResult = local_ternary_pattern(gray_2d, p=self.P, r=self.R, method=self.method)
+        if self.ltp_threshold is not None:
+            lbp_codes: LTPResult = local_ternary_pattern(
+                gray_2d, p=self.P, r=self.R, threshold=self.ltp_threshold, method=self.method)
             return lbp_codes.histogram
         lbp = skimage_lbp(gray_2d, P=self.P, R=self.R, method=self.method)
 
@@ -141,13 +140,17 @@ class LBPHistogramAdapter:
     Adapter that converts a 2D LBP code image into a normalized histogram vector.
     """
     bins: int
+    smooth: float = 0.0
 
     def __call__(self, lbp_codes: np.ndarray) -> np.ndarray:
         if lbp_codes is None or lbp_codes.size == 0:
-            return np.zeros(self.bins, dtype=np.float64)
-        if lbp_codes.ndim == 1:
-            return lbp_codes
-        hist = np.bincount(lbp_codes.ravel(), minlength=self.bins).astype(np.float64)
+            hist = np.zeros(self.bins, dtype=np.float64)
+        elif lbp_codes.ndim == 1:
+            hist = lbp_codes.astype(np.float64)
+        else:
+            hist = np.bincount(lbp_codes.ravel(), minlength=self.bins).astype(np.float64)
+        if self.smooth > 0.0:
+            hist += self.smooth
         s = hist.sum()
         if s > 0:
             hist /= s
@@ -176,6 +179,7 @@ class ImageFolderLoader:
     Y: Optional[int] = None
     use_gray_image_for_viz: bool = False
     gaussian_blur: float = 0.0
+    hist_smooth: float = 0.0
 
     def __call__(self, _records: Sequence[ImageRecord] = ()) -> Sequence[ImageRecord]:
         # First pass: load images and compute raw LBP arrays
@@ -221,7 +225,7 @@ class ImageFolderLoader:
             raw_items.append((meta, viz_img, lbp_codes))
 
         bins = max_code + 1
-        adapter = LBPHistogramAdapter(bins=bins)
+        adapter = LBPHistogramAdapter(bins=bins, smooth=self.hist_smooth)
 
         # Second pass: convert to histogram + build records
         records: List[ImageRecord] = []
@@ -421,9 +425,10 @@ def main(return_results: bool = False, cli_args=None):
         help="Apply Gaussian blur with given sigma before LBP (default: 0, no blur)"
     )
     parser.add_argument(
-        "--ltp",
-        action="store_true",
-        help="Use Local Ternary Pattern instead of LBP (experimental, default: False)"
+        "--ltp-threshold",
+        type=int,
+        default=None,
+        help="If set, use Local Ternary Pattern with this integer threshold instead of LBP. (default: None, disables LTP)"
     )
     parser.add_argument("--visualize", action="store_true", help="Open interactive visualization of matches")
     parser.add_argument("--X", type=int, default=None, help="Width of centermost region for LBP (optional)")
@@ -431,6 +436,12 @@ def main(return_results: bool = False, cli_args=None):
     parser.add_argument("--V", action="store_true", help="Print verbose output")
     parser.add_argument("--G", action="store_true", help="Use grayscale image in visualization")
     parser.add_argument("--crop-seed", type=int, default=None, help="Seed for random cropping (optional, for reproducibility)")
+    parser.add_argument(
+        "--hist-smooth",
+        type=float,
+        default=0.0,
+        help="Additive smoothing value for LBP histogram bins (default: 0.0, no smoothing)"
+    )
     if cli_args is not None:
         args = parser.parse_args(cli_args)
     else:
@@ -443,7 +454,7 @@ def main(return_results: bool = False, cli_args=None):
         _crop_rng = np.random.default_rng(args.crop_seed)
     else:
         _crop_rng = None
-    lbp = LBPFacade(P=args.P, R=args.R, method=args.method, use_ltp=args.ltp)
+    lbp = LBPFacade(P=args.P, R=args.R, method=args.method, ltp_threshold=args.ltp_threshold)
 
     loader = ImageFolderLoader(
         folder=args.folder,
@@ -452,6 +463,7 @@ def main(return_results: bool = False, cli_args=None):
         Y=args.Y,
         use_gray_image_for_viz=args.G,
         gaussian_blur=args.blur,
+        hist_smooth=args.hist_smooth,
     )
 
     pipeline = Pipeline(
