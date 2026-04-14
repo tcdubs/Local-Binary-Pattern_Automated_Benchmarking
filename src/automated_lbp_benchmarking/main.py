@@ -346,10 +346,13 @@ def print_verbose_report(records: Sequence[ImageRecord]) -> None:
     correct_count = sum(1 for r in records if bool(r.correct))
     pct = 100.0 * correct_count / total if total else 0.0
 
+
     lowest_correct = float("inf")
     lowest_incorrect = float("inf")
     highest_correct = float("-inf")
     highest_incorrect = float("-inf")
+    correct_distances = []
+    incorrect_distances = []
 
     for r in records:
         if r.nn_distance is None:
@@ -357,9 +360,14 @@ def print_verbose_report(records: Sequence[ImageRecord]) -> None:
         if bool(r.correct):
             highest_correct = max(highest_correct, r.nn_distance)
             lowest_correct = min(lowest_correct, r.nn_distance)
+            correct_distances.append(r.nn_distance)
         else:
             highest_incorrect = max(highest_incorrect, r.nn_distance)
             lowest_incorrect = min(lowest_incorrect, r.nn_distance)
+            incorrect_distances.append(r.nn_distance)
+
+    avg_correct = float(np.mean(correct_distances)) if correct_distances else None
+    avg_incorrect = float(np.mean(incorrect_distances)) if incorrect_distances else None
 
     summary_lines = []
     summary_lines.append(f"Correct matches: {correct_count}/{total} ({pct:.2f}%)")
@@ -367,10 +375,12 @@ def print_verbose_report(records: Sequence[ImageRecord]) -> None:
           "Highest distance among correct matches: N/A")
     summary_lines.append(f"Lowest distance among correct matches: {lowest_correct:.6f}" if lowest_correct != float("-inf") else
           "Lowest distance among correct matches: N/A")
+    summary_lines.append(f"Average distance among correct matches: {avg_correct:.6f}" if avg_correct is not None else "Average distance among correct matches: N/A")
     summary_lines.append(f"Highest distance among incorrect matches: {highest_incorrect:.6f}" if highest_incorrect != float("inf") else
           "Highest distance among incorrect matches: N/A")
     summary_lines.append(f"Lowest distance among incorrect matches: {lowest_incorrect:.6f}" if lowest_incorrect != float("inf") else
           "Lowest distance among incorrect matches: N/A")
+    summary_lines.append(f"Average distance among incorrect matches: {avg_incorrect:.6f}" if avg_incorrect is not None else "Average distance among incorrect matches: N/A")
 
     for line in summary_lines:
         print(line)
@@ -382,8 +392,10 @@ def print_verbose_report(records: Sequence[ImageRecord]) -> None:
         "pct_correct": float(pct),
         "highest_correct": float(highest_correct) if highest_correct != float("-inf") else None,
         "lowest_correct": float(lowest_correct) if lowest_correct != float("inf") else None,
+        "average_correct": avg_correct,
         "highest_incorrect": float(highest_incorrect) if highest_incorrect != float("-inf") else None,
         "lowest_incorrect": float(lowest_incorrect) if lowest_incorrect != float("inf") else None,
+        "average_incorrect": avg_incorrect,
     }
     return summary_lines, results
 

@@ -23,7 +23,8 @@ EXPERIMENTS = {
 }
 
 # Fixed arguments
-FOLDER = r"LBP_Test_Images/Swatches/LBP_Texture_Swatches"
+FOLDER = r"LBP_Test_Images"
+#FOLDER = r"LBP_Test_Images/Swatches/LBP_Texture_Swatches"
 X = 64
 Y = 64
 
@@ -41,7 +42,8 @@ with open(log_file, 'w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     header = keys + [
         'correct_matches', 'total', 'pct_correct',
-        'highest_correct', 'lowest_correct', 'highest_incorrect', 'lowest_incorrect',
+        'highest_correct', 'lowest_correct', 'average_correct',
+        'highest_incorrect', 'lowest_incorrect', 'average_incorrect',
         'csv_file', 'results_json_file'
     ]
     writer.writerow(header)
@@ -82,8 +84,10 @@ with open(log_file, 'w', newline='', encoding='utf-8') as f:
                     results.get('pct_correct'),
                     results.get('highest_correct'),
                     results.get('lowest_correct'),
+                    results.get('average_correct'),
                     results.get('highest_incorrect'),
                     results.get('lowest_incorrect'),
+                    results.get('average_incorrect'),
                     csv_name,
                     os.path.basename(results_json_file)
                 ]
@@ -107,13 +111,15 @@ with open(log_file, 'w', newline='', encoding='utf-8') as f:
                         results.get('pct_correct'),
                         results.get('highest_correct'),
                         results.get('lowest_correct'),
+                        results.get('average_correct'),
                         results.get('highest_incorrect'),
                         results.get('lowest_incorrect'),
+                        results.get('average_incorrect'),
                         csv_name,
                         os.path.basename(results_json_file)
                     ]
                 else:
-                    row += ["ERROR"] * 8 + [csv_name, ""]
+                    row += ["ERROR"] * 10 + [csv_name, ""]
             except Exception as e:
                 print(f"Experiment failed (subprocess): {e}")
                 row += ["ERROR"] * 8 + [csv_name, ""]
