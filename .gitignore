@@ -21,7 +21,7 @@ dist/
 # OS junk
 .DS_Store
 Thumbs.db
-LBP_Test_Images/*
+#LBP_Test_Images/*
 
 # Testing / coverage
 .coverage
@@ -29,7 +29,7 @@ htmlcov/
 .pytest_cache/
 
 # Results folder (optional)
-results/
+#results/
 
 # Logs
 *.log

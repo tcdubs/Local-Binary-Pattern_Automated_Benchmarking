@@ -11,6 +11,7 @@ dependencies = [
   "numpy",
   "Pillow",
   "scikit-image",
+  "scipy",
 ]
 
 [project.scripts]
