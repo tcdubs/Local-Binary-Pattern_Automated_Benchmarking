@@ -17,76 +17,231 @@ class MatchesView:
 
     def save_as_pdf(self, models: Iterable[MatchItemModel], pdf_path: str, max_size: int = 300, args: dict = None, summary_lines: list = None) -> None:
         """
-        Render a summary and top 5 matches as text (compact format). No giant images.
+        Render a summary and all visual match rows into a compact paginated PDF.
+        In multi-match mode, cap displayed matched thumbnails per record to 5.
         """
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import ImageDraw, ImageFont
 
-        models = list(models)[:5]  # Cap at 5 images
+        models = list(models)
         if not models:
             return
 
-        # Try to load a default font
         try:
-            font = ImageFont.truetype("arial.ttf", 14)
-            font_small = ImageFont.truetype("arial.ttf", 10)
+            font = ImageFont.truetype("arial.ttf", 16)
+            font_small = ImageFont.truetype("arial.ttf", 12)
+            font_title = ImageFont.truetype("arial.ttf", 20)
         except Exception:
             font = ImageFont.load_default()
             font_small = ImageFont.load_default()
+            font_title = ImageFont.load_default()
 
-        pad = 10
-        line_height = 18
-        max_width = 1000
-        
-        # Build text content
-        text_lines = []
-        
-        # Add summary
-        summary_lines = summary_lines or []
-        args_lines = []
-        if args:
-            args_lines.append("Arguments used:")
-            for k, v in args.items():
-                args_lines.append(f"  {k}: {v}")
-            args_lines.append("")
-        
-        text_lines.extend(args_lines + summary_lines)
-        text_lines.append("=" * 80)
-        
-        # Add each match (top 5)
-        for idx, m in enumerate(models):
-            text_lines.append(f"\n[Match {idx + 1}] Index: {m.index}")
-            text_lines.append("Original: " + ", ".join(f"{k}={v}" for k, v in m.original_meta.items()))
-            
-            matched_images = m.matched_images if m.matched_images is not None else ([m.matched_image] if m.matched_image else [])
-            if matched_images:
-                text_lines.append(f"Matched: {len(matched_images)} match(es)")
-                if m.matched_meta_list:
-                    for i, meta in enumerate(m.matched_meta_list):
-                        dist_str = ""
-                        if m.matched_distances and i < len(m.matched_distances):
-                            dist_val = m.matched_distances[i]
-                            dist_str = f" (distance: {float(dist_val):.6f})" if isinstance(dist_val, (int, float)) else f" (distance: {dist_val})"
-                        meta_str = ", ".join(f"{k}={v}" for k, v in meta.items())
-                        text_lines.append(f"  {i+1}. {meta_str}{dist_str}")
+        page_width = 1654
+        page_height = 2339
+        pad = 36
+        section_gap = 24
+        image_box = min(max_size, 220)
+        matches_per_row = 3
+        max_pdf_matches = 5
+        line_spacing = 6
+        pages = []
+
+        def line_height_for(text_font):
+            bbox = text_font.getbbox("Ag")
+            return (bbox[3] - bbox[1]) + line_spacing
+
+        def wrap_text(draw_obj, text, text_font, max_text_width):
+            if not text:
+                return [""]
+            words = str(text).split()
+            if not words:
+                return [""]
+            lines = []
+            current = words[0]
+            for word in words[1:]:
+                candidate = f"{current} {word}"
+                if draw_obj.textlength(candidate, font=text_font) <= max_text_width:
+                    current = candidate
+                else:
+                    lines.append(current)
+                    current = word
+            lines.append(current)
+            return lines
+
+        def append_wrapped(lines, draw_obj, text, text_font, max_text_width):
+            lines.extend(wrap_text(draw_obj, text, text_font, max_text_width))
+
+        def make_thumb(img):
+            if img is None:
+                return None
+            thumb = img.copy()
+            thumb.thumbnail((image_box, image_box), Image.LANCZOS)
+            if thumb.mode != "RGB":
+                thumb = thumb.convert("RGB")
+            return thumb
+
+        def build_single_match_lines(model):
+            info_lines = [f"Index: {model.index}", "-- Original --"]
+            for k, v in model.original_meta.items():
+                info_lines.append(f"{k}: {v}")
+            info_lines.append("")
+            info_lines.append("-- Matched --")
+            if model.matched_meta:
+                for k, v in model.matched_meta.items():
+                    info_lines.append(f"{k}: {v}")
             else:
-                text_lines.append("Matched: None")
-            text_lines.append("")
-        
-        # Estimate total height
-        total_height = pad + len(text_lines) * line_height + pad
-        
-        # Create image
-        img = Image.new("RGB", (max_width, total_height), "white")
-        draw = ImageDraw.Draw(img)
-        
-        y = pad
-        for line in text_lines:
-            draw.text((pad, y), line, fill="black", font=font_small)
-            y += line_height
-        
-        # Save as PDF
+                info_lines.append("(no match)")
+            info_lines.append("")
+            info_lines.append(f"Distance Metric: {model.metric_name}")
+            if model.distance is None:
+                info_lines.append("Distance: None")
+            elif isinstance(model.distance, (int, float)):
+                info_lines.append(f"Distance: {float(model.distance):.6f}")
+            else:
+                info_lines.append(f"Distance: {model.distance}")
+            return info_lines
+
+        def build_multi_match_lines(model):
+            info_lines = [f"Index: {model.index}"]
+            if model.original_meta:
+                original_meta_text = ", ".join(f"{k}={v}" for k, v in model.original_meta.items())
+                info_lines.append(f"Original: {original_meta_text}")
+            matched_meta_list = model.matched_meta_list or []
+            total_matches = len(model.matched_images or [])
+            shown_matches = min(total_matches, max_pdf_matches)
+            info_lines.append(f"Shown matches: {shown_matches}/{total_matches}")
+            if matched_meta_list:
+                for idx, meta in enumerate(matched_meta_list[:shown_matches], start=1):
+                    meta_text = ", ".join(f"{k}={v}" for k, v in meta.items())
+                    if model.matched_distances and idx - 1 < len(model.matched_distances):
+                        dist_val = model.matched_distances[idx - 1]
+                        if isinstance(dist_val, (int, float)):
+                            meta_text = f"{meta_text} | distance={float(dist_val):.6f}"
+                        else:
+                            meta_text = f"{meta_text} | distance={dist_val}"
+                    info_lines.append(f"Match {idx}: {meta_text}")
+                if total_matches > shown_matches:
+                    info_lines.append(f"... {total_matches - shown_matches} more matches not shown in PDF")
+            else:
+                info_lines.append("(no matches)")
+            info_lines.append(f"Distance Metric: {model.metric_name}")
+            return info_lines
+
+        summary_block = ["LBP Match Visualization"]
+        if args:
+            summary_block.append("Arguments used:")
+            for k, v in args.items():
+                summary_block.append(f"  {k}: {v}")
+        if summary_lines:
+            summary_block.extend(summary_lines)
+
+        def new_page():
+            page = Image.new("RGB", (page_width, page_height), "white")
+            return page, ImageDraw.Draw(page), pad
+
+        current_page, current_draw, current_y = new_page()
+
+        summary_max_width = page_width - 2 * pad
+        summary_line_height = line_height_for(font_small)
+        summary_title_height = line_height_for(font_title)
+        summary_wrapped = []
+        for idx, line in enumerate(summary_block):
+            if idx == 0:
+                summary_wrapped.extend(wrap_text(current_draw, line, font_title, summary_max_width))
+            else:
+                append_wrapped(summary_wrapped, current_draw, line, font_small, summary_max_width)
+        summary_height = pad + summary_title_height + max(0, (len(summary_wrapped) - 1) * summary_line_height) + section_gap
+
+        if current_y + summary_height > page_height - pad:
+            pages.append(current_page)
+            current_page, current_draw, current_y = new_page()
+
+        for idx, line in enumerate(summary_wrapped):
+            text_font = font_title if idx == 0 else font_small
+            current_draw.text((pad, current_y), line, fill="black", font=text_font)
+            current_y += summary_title_height if idx == 0 else summary_line_height
+        current_y += section_gap
+        current_draw.line((pad, current_y, page_width - pad, current_y), fill="black", width=2)
+        current_y += section_gap
+
+        info_width = 520
+        for model in models:
+            matched_images = model.matched_images if model.matched_images is not None else ([model.matched_image] if model.matched_image else [])
+            has_multi_match = model.matched_images is not None and len(model.matched_images) > 0
+
+            if has_multi_match:
+                limited_matches = matched_images[:max_pdf_matches]
+                thumbs = [make_thumb(img) for img in limited_matches]
+                rows = max(1, (len(thumbs) + matches_per_row - 1) // matches_per_row)
+                grid_height = rows * (image_box + summary_line_height + 12)
+                info_lines_raw = build_multi_match_lines(model)
+            else:
+                thumbs = [make_thumb(model.original_image), make_thumb(model.matched_image)]
+                grid_height = image_box
+                info_lines_raw = build_single_match_lines(model)
+
+            wrapped_info_lines = []
+            for line in info_lines_raw:
+                append_wrapped(wrapped_info_lines, current_draw, line, font_small, info_width)
+            info_height = max(summary_line_height, len(wrapped_info_lines) * summary_line_height)
+            row_height = max(grid_height, info_height) + section_gap
+
+            if current_y + row_height > page_height - pad:
+                pages.append(current_page)
+                current_page, current_draw, current_y = new_page()
+
+            current_draw.rectangle((pad, current_y, page_width - pad, current_y + row_height - 10), outline="#BDBDBD", width=2)
+
+            if has_multi_match:
+                original_thumb = make_thumb(model.original_image)
+                left_x = pad + 12
+                top_y = current_y + 12
+                if original_thumb is not None:
+                    current_page.paste(original_thumb, (left_x, top_y))
+                    current_draw.rectangle((left_x, top_y, left_x + image_box, top_y + image_box), outline="#444444", width=1)
+                else:
+                    current_draw.rectangle((left_x, top_y, left_x + image_box, top_y + image_box), outline="#444444", width=1)
+                    current_draw.text((left_x + 12, top_y + image_box // 2), "(no image)", fill="black", font=font_small)
+
+                grid_x = left_x + image_box + 24
+                for idx, thumb in enumerate(thumbs):
+                    thumb_x = grid_x + (idx % matches_per_row) * (image_box + 18)
+                    thumb_y = top_y + (idx // matches_per_row) * (image_box + summary_line_height + 12)
+                    if thumb is not None:
+                        current_page.paste(thumb, (thumb_x, thumb_y))
+                    current_draw.rectangle((thumb_x, thumb_y, thumb_x + image_box, thumb_y + image_box), outline="#444444", width=1)
+                    dist_text = "(no distance)"
+                    if model.matched_distances and idx < len(model.matched_distances):
+                        dist_val = model.matched_distances[idx]
+                        if isinstance(dist_val, (int, float)):
+                            dist_text = f"{float(dist_val):.6f}"
+                        else:
+                            dist_text = str(dist_val)
+                    current_draw.text((thumb_x, thumb_y + image_box + 4), dist_text, fill="black", font=font_small)
+            else:
+                top_y = current_y + 12
+                left_x = pad + 12
+                right_x = left_x + image_box + 24
+                for thumb, thumb_x in zip(thumbs, [left_x, right_x]):
+                    if thumb is not None:
+                        current_page.paste(thumb, (thumb_x, top_y))
+                    current_draw.rectangle((thumb_x, top_y, thumb_x + image_box, top_y + image_box), outline="#444444", width=1)
+                    if thumb is None:
+                        label = "(no image)" if thumb_x == left_x else "(no match)"
+                        current_draw.text((thumb_x + 12, top_y + image_box // 2), label, fill="black", font=font_small)
+
+            info_x = page_width - pad - info_width
+            info_y = current_y + 12
+            for line in wrapped_info_lines:
+                current_draw.text((info_x, info_y), line, fill="black", font=font_small)
+                info_y += summary_line_height
+
+            current_y += row_height
+
+        pages.append(current_page)
+
         try:
-            img.save(pdf_path, "PDF")
+            rgb_pages = [page.convert("RGB") for page in pages]
+            rgb_pages[0].save(pdf_path, "PDF", resolution=100.0, save_all=True, append_images=rgb_pages[1:])
         except Exception as e:
             print(f"Warning: Could not save PDF: {e}")
 
