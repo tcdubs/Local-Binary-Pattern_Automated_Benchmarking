@@ -1,0 +1,2 @@
+Good filtering out of false positives:
+--X 256 --Y 256 --V --P 8 --R 1 --metric hellinger --method ror --blur 1.0 --visualize --hist-smooth 0.000001 --ltp-threshold 5 --simulate-noise --noise-sigma 10 --tolerance 0.039
