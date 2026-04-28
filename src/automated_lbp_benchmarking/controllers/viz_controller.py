@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -74,15 +73,9 @@ class MatchVisualizerController:
         for idx, it in enumerate(items):
             if isinstance(it, dict):
                 original_image = it.get("IMAGE")
-                matched_idx = it.get("MATCHED_INDEX")
+                matched_image = it.get("MATCHED_IMAGE")
                 matched_indices = it.get("MATCHED_INDICES") or it.get("matching_indices")
                 matched_distances = it.get("MATCHED_DISTANCES") or it.get("matching_distances")
-
-                if isinstance(matched_idx, int) and (matched_idx < 0 or matched_idx >= len(items)):
-                    matched_idx = None
-
-                matched_item = items[matched_idx] if isinstance(matched_idx, int) else None
-                matched_image = matched_item.get("IMAGE") if isinstance(matched_item, dict) else None
 
                 matched_images: List[Image.Image] = []
                 matched_meta_list: List[Dict[str, str]] = []
@@ -94,7 +87,7 @@ class MatchVisualizerController:
                             continue
                         match_item = items[match_idx]
                         if isinstance(match_item, dict):
-                            image = match_item.get("IMAGE")
+                            image = match_item.get("MATCHED_IMAGE") or match_item.get("IMAGE")
                             if isinstance(image, Image.Image):
                                 matched_images.append(image)
                             matched_meta_list.append(_extract_string_meta_from_mapping(match_item))
@@ -104,7 +97,7 @@ class MatchVisualizerController:
                                 matched_distance_list.append(_extract_distance_from_mapping(match_item))
 
                 original_meta = _extract_string_meta_from_mapping(it)
-                matched_meta = _extract_string_meta_from_mapping(matched_item) if isinstance(matched_item, dict) else {}
+                matched_meta = {}  # No longer using matched_item for meta
 
                 dist = _extract_distance_from_mapping(it)
                 per_item_metric = _extract_metric_from_mapping(it)
@@ -118,10 +111,10 @@ class MatchVisualizerController:
                         matched_images=matched_images or None,
                         original_meta=original_meta,
                         matched_meta=matched_meta,
-                        matched_meta_list=matched_meta_list or None,
                         distance=dist,
-                        matched_distances=matched_distance_list or None,
                         metric_name=display_metric,
+                        matched_meta_list=matched_meta_list or None,
+                        matched_distances=matched_distance_list or None,
                     )
                 )
                 continue
@@ -170,9 +163,7 @@ class MatchVisualizerController:
                         matched_images=matched_images or None,
                         original_meta=original_meta,
                         matched_meta=matched_meta,
-                        matched_meta_list=matched_meta_list or None,
                         distance=dist,
-                        matched_distances=matched_distance_list or None,
                         metric_name=default_metric_display,
                     )
                 )

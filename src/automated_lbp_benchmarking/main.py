@@ -114,13 +114,13 @@ class LBPFacade:
     method: str = "uniform"
     ltp_threshold: int | None = None
 
-    def __call__(self, gray_2d: np.ndarray) -> np.ndarray:
+    def __call__(self, gray_2d: np.ndarray, mask: np.ndarray = None) -> np.ndarray:
         if gray_2d.ndim != 2:
             raise ValueError("LBP input must be a 2D grayscale array")
 
         if self.ltp_threshold is not None:
             lbp_codes: LTPResult = local_ternary_pattern(
-                gray_2d, p=self.P, r=self.R, threshold=self.ltp_threshold, method=self.method)
+                gray_2d, p=self.P, r=self.R, threshold=self.ltp_threshold, method=self.method, mask=mask)
             return lbp_codes.histogram
         lbp = skimage_lbp(gray_2d, P=self.P, R=self.R, method=self.method)
 
@@ -169,11 +169,10 @@ class Stage:
 
 
 @dataclass
-class ImageFolderLoader:
-    """
-    Stage (source): loads PNGs from a folder, parses metadata, computes LBP histograms,
-    and emits ImageRecord objects.
-    """
+
+# Modified loader to return both raw and processed records
+@dataclass
+class ImageFolderLoaderDual:
     folder: str
     lbp: LBPFacade
     X: Optional[int] = None
@@ -187,15 +186,12 @@ class ImageFolderLoader:
     simulate_noise: bool = False
     noise_sigma: float = 10.0
 
-    def __call__(self, _records: Sequence[ImageRecord] = ()) -> Sequence[ImageRecord]:
-        # First pass: load images and compute raw LBP arrays
+    def __call__(self, _records: Sequence[ImageRecord] = ()) -> tuple[list[ImageRecord], list[ImageRecord]]:
         raw_items = []
+        processed_items = []
         max_code = 0
 
         for fname in sorted(os.listdir(self.folder)):
-            # if not fname.lower().endswith(".png") or not fname.lower().endswith(".jpg"):
-            #     continue
-
             path = os.path.join(self.folder, fname)
             try:
                 meta = parse_filename(fname)
@@ -209,74 +205,100 @@ class ImageFolderLoader:
                     gray_arr = np.array(gray, dtype=np.float32)
 
                     viz_img = rgb.copy()
+                    viz_img_proc = viz_img.copy()
+                    gray_arr_proc = gray_arr.copy()
 
+                    # Cropping
                     if self.X is not None and self.Y is not None:
-                        # crop numpy grayscale array
                         gray_arr = center_crop(gray_arr, self.X, self.Y)
-
-                        # crop visualization image
+                        gray_arr_proc = center_crop(gray_arr_proc, self.X, self.Y)
                         viz_img = center_crop_pil(viz_img, self.X, self.Y)
+                        viz_img_proc = center_crop_pil(viz_img_proc, self.X, self.Y)
                         if self.use_gray_image_for_viz:
                             viz_img = viz_img.convert("L")
-                    
+                            viz_img_proc = viz_img_proc.convert("L")
+
+                    # RAW: no processing
+                    # Processed: apply noise/illum/blur
                     # Prepare transformations if needed
                     brightness = self.brightness if self.simulate_illumination else 1.0
                     contrast = self.contrast if self.simulate_illumination else 1.0
                     noise = None
                     if self.simulate_noise:
                         rng = globals().get("_crop_rng") or np.random.default_rng()
-                        noise = rng.normal(0, self.noise_sigma, gray_arr.shape)
-                    
-                    # Apply illumination to gray_arr
+                        noise = rng.normal(0, self.noise_sigma, gray_arr_proc.shape)
+
+                    # Apply illumination to gray_arr_proc
                     if self.simulate_illumination:
-                        gray_arr = (gray_arr - 128) * contrast + 128 * brightness
-                        gray_arr = np.clip(gray_arr, 0, 255)
-                        gray_arr = gray_arr.astype(np.uint8)
-                    
-                    # Apply noise to gray_arr
+                        gray_arr_proc = (gray_arr_proc - 128) * contrast + 128 * brightness
+                        gray_arr_proc = np.clip(gray_arr_proc, 0, 255)
+                        gray_arr_proc = gray_arr_proc.astype(np.uint8)
+
+                    # Apply noise to gray_arr_proc
                     if self.simulate_noise:
-                        gray_arr = gray_arr.astype(np.float32) + noise
-                        gray_arr = np.clip(gray_arr, 0, 255)
-                        gray_arr = gray_arr.astype(np.uint8)
-                    
-                    # Apply same transformations to viz_img
+                        gray_arr_proc = gray_arr_proc.astype(np.float32) + noise
+                        gray_arr_proc = np.clip(gray_arr_proc, 0, 255)
+                        gray_arr_proc = gray_arr_proc.astype(np.uint8)
+
+                    # Apply same transformations to viz_img_proc
                     if self.simulate_illumination or self.simulate_noise:
-                        viz_arr = np.array(viz_img, dtype=np.float32)
+                        viz_arr = np.array(viz_img_proc, dtype=np.float32)
                         if self.simulate_illumination:
                             viz_arr = (viz_arr - 128) * contrast + 128 * brightness
                             viz_arr = np.clip(viz_arr, 0, 255)
                         if self.simulate_noise:
                             if viz_arr.ndim == 3:
-                                noise_viz = noise[:, :, np.newaxis]  # (h, w, 1) to broadcast to (h, w, 3)
+                                noise_viz = noise[:, :, np.newaxis]
                             else:
                                 noise_viz = noise
                             viz_arr = viz_arr + noise_viz
                             viz_arr = np.clip(viz_arr, 0, 255)
                         viz_arr = viz_arr.astype(np.uint8)
                         if viz_arr.ndim == 3:
-                            viz_img = Image.fromarray(viz_arr, mode='RGB')
+                            viz_img_proc = Image.fromarray(viz_arr, mode='RGB')
                         else:
-                            viz_img = Image.fromarray(viz_arr, mode='L')
-                    
+                            viz_img_proc = Image.fromarray(viz_arr, mode='L')
+
                     if self.gaussian_blur > 0.0:
-                        gray_arr = gaussian_filter(gray_arr.astype(np.float32), sigma=self.gaussian_blur).astype(np.uint8)
+                        gray_arr_proc = gaussian_filter(gray_arr_proc.astype(np.float32), sigma=self.gaussian_blur).astype(np.uint8)
 
             except Exception as e:
                 print(f"Failed to process {path} due to {e}, skipping.")
                 traceback.print_exc()
                 continue
 
-            lbp_codes = self.lbp(gray_arr)
-            if lbp_codes.size:
-                max_code = max(max_code, int(lbp_codes.max()))
+            # Build mask: True for non-white pixels, False for white background
+            # Assume gray_arr and gray_arr_proc are 2D arrays (grayscale)
+            mask_raw = (gray_arr < 255)
+            mask_proc = (gray_arr_proc < 255)
 
-            raw_items.append((meta, viz_img, lbp_codes))
+            # Set masked-out (background) pixels to black in the source images
+            gray_arr = gray_arr.copy()
+            gray_arr_proc = gray_arr_proc.copy()
+            gray_arr[~mask_raw] = 0
+            gray_arr_proc[~mask_proc] = 0
+
+            # If using LTP, pass mask
+            if hasattr(self.lbp, 'ltp_threshold') and self.lbp.ltp_threshold is not None:
+                lbp_codes_raw = self.lbp(gray_arr, mask=mask_raw)
+                lbp_codes_proc = self.lbp(gray_arr_proc, mask=mask_proc)
+            else:
+                lbp_codes_raw = self.lbp(gray_arr)
+                lbp_codes_proc = self.lbp(gray_arr_proc)
+
+            if lbp_codes_raw.size:
+                max_code = max(max_code, int(lbp_codes_raw.max()))
+            if lbp_codes_proc.size:
+                max_code = max(max_code, int(lbp_codes_proc.max()))
+
+            raw_items.append((meta, viz_img, lbp_codes_raw))
+            processed_items.append((meta, viz_img_proc, lbp_codes_proc))
 
         bins = max_code + 1
         adapter = LBPHistogramAdapter(bins=bins, smooth=self.hist_smooth)
 
-        # Second pass: convert to histogram + build records
-        records: List[ImageRecord] = []
+        raw_records: List[ImageRecord] = []
+        processed_records: List[ImageRecord] = []
         for meta, viz_img, lbp_codes in raw_items:
             rec = ImageRecord(
                 instance=meta["INSTANCE"],
@@ -287,76 +309,74 @@ class ImageFolderLoader:
                 image=viz_img,
                 lbp_hist=adapter(lbp_codes),
             )
-            records.append(rec)
+            raw_records.append(rec)
+        for meta, viz_img, lbp_codes in processed_items:
+            rec = ImageRecord(
+                instance=meta["INSTANCE"],
+                category=meta["CATEGORY"],
+                distance=meta["DISTANCE"],
+                rotation=meta["ROTATION"],
+                lighting=meta["LIGHTING"],
+                image=viz_img,
+                lbp_hist=adapter(lbp_codes),
+            )
+            processed_records.append(rec)
 
-        return records
+        return raw_records, processed_records
 
 
 @dataclass
-class NearestNeighborMatcher(Stage):
-    """annotates each record with nearest-neighbor match info."""
+
+# Matcher that matches processed records against raw records
+@dataclass
+class ProcessedToRawMatcher(Stage):
     distance_fn: Callable[[np.ndarray, np.ndarray], float] = chi2_distance
     metric_name: str = "chi2"
     tolerance: Optional[float] = None
     top: Optional[int] = None
 
-    def __call__(self, records: Sequence[ImageRecord]) -> Sequence[ImageRecord]:
-        if not records:
-            return records
+    def __call__(self, processed_records: Sequence[ImageRecord], raw_records: Sequence[ImageRecord]) -> Sequence[ImageRecord]:
+        if not processed_records or not raw_records:
+            return processed_records
 
         distance_fn = self.distance_fn
         if self.metric_name:
             distance_fn = get_distance_metric(self.metric_name)
 
-        hists = [np.asarray(r.lbp_hist, dtype=np.float64) for r in records]
-        n = len(hists)
+        raw_hists = [np.asarray(r.lbp_hist, dtype=np.float64) for r in raw_records]
+        n = len(raw_hists)
 
-        for i, rec in enumerate(records):
+        for i, rec in enumerate(processed_records):
             rec.index = i
-            if n == 1:
-                rec.nn_distance = None
-                rec.matched_category = None
-                rec.matched_index = None
-                rec.matching_indices = []
-                rec.matching_distances = []
-                rec.matching_categories = []
-                rec.correct = False
-                continue
-
             min_val = float("inf")
             min_idx = -1
             matches: List[int] = []
             match_distances: List[float] = []
             match_categories: List[str] = []
-            all_distances: List[tuple] = []  # For --top feature
+            all_distances: List[tuple] = []
 
             for j in range(n):
-                if i == j:
-                    continue
-                d = distance_fn(hists[i], hists[j])
+                d = distance_fn(np.asarray(rec.lbp_hist, dtype=np.float64), raw_hists[j])
                 if d < min_val:
                     min_val = d
                     min_idx = j
                 if self.tolerance is not None and d < self.tolerance:
                     matches.append(j)
                     match_distances.append(float(d))
-                    match_categories.append(records[j].category)
+                    match_categories.append(raw_records[j].category)
                 if self.top is not None:
-                    all_distances.append((j, float(d), records[j].category))
+                    all_distances.append((j, float(d), raw_records[j].category))
 
-            # Handle tolerance-based matches
             if matches:
                 sorted_matches = sorted(
                     zip(matches, match_distances, match_categories),
                     key=lambda x: x[1],
                 )
-                # If --top is also set, cap the tolerance results to the top N closest
                 if self.top is not None:
                     sorted_matches = sorted_matches[:self.top]
                 rec.matching_indices = [m[0] for m in sorted_matches]
                 rec.matching_distances = [m[1] for m in sorted_matches]
                 rec.matching_categories = [m[2] for m in sorted_matches]
-            # Handle top-n matches only when tolerance is NOT active
             elif self.top is not None and self.tolerance is None and all_distances:
                 sorted_top = sorted(all_distances, key=lambda x: x[1])[:self.top]
                 rec.matching_indices = [m[0] for m in sorted_top]
@@ -369,10 +389,10 @@ class NearestNeighborMatcher(Stage):
 
             rec.nn_distance = None if min_idx == -1 else float(min_val)
             rec.matched_index = None if min_idx == -1 else int(min_idx)
-            rec.matched_category = None if min_idx == -1 else records[min_idx].category
-            rec.correct = False if min_idx == -1 else (rec.category == records[min_idx].category)
-
-        return records
+            rec.matched_category = None if min_idx == -1 else raw_records[min_idx].category
+            rec.correct = False if min_idx == -1 else (rec.category == raw_records[min_idx].category)
+        
+        return processed_records
 
 
 # ----------------------------
@@ -380,15 +400,17 @@ class NearestNeighborMatcher(Stage):
 # ----------------------------
 
 @dataclass
-class Pipeline:
-    source: Callable[[], Sequence[ImageRecord]]
-    stages: List[Stage] = field(default_factory=list)
 
-    def run(self) -> List[ImageRecord]:
-        records = list(self.source())
-        for stage in self.stages:
-            records = list(stage(records))
-        return records
+# Pipeline for processed-to-raw matching
+@dataclass
+class PipelineDual:
+    source: Callable[[], tuple[list[ImageRecord], list[ImageRecord]]]
+    matcher: ProcessedToRawMatcher
+
+    def run(self) -> list[ImageRecord]:
+        raw_records, processed_records = self.source()
+        processed_records = self.matcher(processed_records, raw_records)
+        return processed_records
 
 
 # ----------------------------
@@ -578,8 +600,9 @@ def main(return_results: bool = False, cli_args=None):
         _crop_rng = np.random.default_rng(args.crop_seed)
     else:
         _crop_rng = None
+
     lbp = LBPFacade(P=args.P, R=args.R, method=args.method, ltp_threshold=args.ltp_threshold)
-    loader = ImageFolderLoader(
+    loader = ImageFolderLoaderDual(
         folder=args.folder,
         lbp=lbp,
         X=args.X,
@@ -594,14 +617,12 @@ def main(return_results: bool = False, cli_args=None):
         noise_sigma=args.noise_sigma,
     )
 
-    pipeline = Pipeline(
-        source=lambda: loader(()),
-        stages=[
-            NearestNeighborMatcher(metric_name=args.metric, tolerance=args.tolerance, top=args.top),
-        ],
-    )
-
-    records = pipeline.run()
+    matcher = ProcessedToRawMatcher(metric_name=args.metric, tolerance=args.tolerance, top=args.top)
+    # Get both raw and processed records once
+    raw_records, processed_records = loader(())
+    # Run matching
+    processed_records = matcher(processed_records, raw_records)
+    records = processed_records
 
     # Suppress file output if running under run_experiments.py (detected by env var)
     running_experiments = os.environ.get("LBP_EXPERIMENT_MODE") == "1"
@@ -637,7 +658,13 @@ def main(return_results: bool = False, cli_args=None):
 
     if args.visualize:
         items_for_viz = []
-        for r in records:
+        for r in processed_records:
+            matched_img = None
+            if r.matched_index is not None and 0 <= r.matched_index < len(raw_records):
+                matched_img = raw_records[r.matched_index].image
+                # Resize matched image to match processed image size for display
+                if matched_img.size != r.image.size:
+                    matched_img = matched_img.resize(r.image.size, Image.BILINEAR)
             items_for_viz.append({
                 "INSTANCE": r.instance,
                 "CATEGORY": r.category,
@@ -645,18 +672,17 @@ def main(return_results: bool = False, cli_args=None):
                 "ROTATION": r.rotation,
                 "LIGHTING": r.lighting,
                 "LBP": r.lbp_hist,
-                "IMAGE": r.image,
+                "IMAGE": r.image,  # preprocessed image (left)
+                "MATCHED_IMAGE": matched_img,  # matched raw image (right, resized)
                 "INDEX": r.index,
                 "MATCHED_INDEX": r.matched_index,
                 "MATCHED_CATEGORY": r.matched_category,
-                "MATCHED_INDICES": r.matching_indices,
-                "MATCHED_DISTANCES": r.matching_distances,
-                "MATCHED_CATEGORIES": r.matching_categories,
+                "MATCHED_INDICES": getattr(r, "matching_indices", []),
+                "MATCHED_DISTANCES": getattr(r, "matching_distances", []),
+                "MATCHED_CATEGORIES": getattr(r, "matching_categories", []),
                 "CORRECT": r.correct,
             })
-        # Convert args to a printable dict
         args_dict = vars(args)
-        # Only save PDF if save-csv is set
         save_pdf = args.save_csv is not None
         visualize_matches(items_for_viz, metric_name=args.metric, args=args_dict, summary_lines=summary_lines, save_pdf=save_pdf)
 
