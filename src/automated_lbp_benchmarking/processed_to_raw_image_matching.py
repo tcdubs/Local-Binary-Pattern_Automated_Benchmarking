@@ -50,6 +50,8 @@ class ProcessedToRawMatcher:
                     correct=correct,
                     matched_image=matched_image)
                 visited.append(min_idx)
+                if min_val == float("inf"):
+                    break
                 match_records.append(new_match)
                 min_val = float("inf")
                 min_idx = -1

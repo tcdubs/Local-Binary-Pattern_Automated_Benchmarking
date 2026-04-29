@@ -21,7 +21,7 @@ matching:
 
 preprocessing:
   gaussian_blur: 0.0
-  gaussian_noise: null
+  gaussian_noise: 10
   illumination: null
   contrast: null
 

@@ -66,13 +66,13 @@ def apply_processing(image: Image.Image, processing_args: Dict, rng: np.random.G
         processed_image = center_crop_pil(processed_image, processing_args["cropping"]["width"], processing_args["cropping"]["height"], rng)
 
     image_as_array = np.asarray(processed_image, dtype=np.uint8)
-    if gaussian_blur and gaussian_blur > 0:
-        image_as_array = add_gaussian_blur(image_as_array, sigma=gaussian_blur)
     if gaussian_noise and gaussian_noise > 0:
         image_as_array = apply_gaussian_noise(image_as_array, stddev=gaussian_noise, rng=rng) 
     if illumination_factor and illumination_factor != 1.0:
         image_as_array = simulate_brightness(image_as_array, brightness_factor=illumination_factor)
     if contrast_factor and contrast_factor != 1.0:
         image_as_array = simulate_contrast(image_as_array, contrast_factor=contrast_factor)
+    if gaussian_blur and gaussian_blur > 0:
+        image_as_array = add_gaussian_blur(image_as_array, sigma=gaussian_blur)
 
     return image_as_array

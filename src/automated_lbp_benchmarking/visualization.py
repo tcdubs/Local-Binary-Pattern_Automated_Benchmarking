@@ -146,24 +146,43 @@ class ImageRecordMatchViewer:
         match_index: int,
         match_record: "MatchRecord",
     ):
-        card = ttk.Frame(parent, padding=8, relief="solid")
+        # ttk widgets do not reliably support custom background colors,
+        # so this match card uses tk.Frame/tk.Label instead.
+        if match_record.correct is True:
+            bg_color = "#e6f7e6"  # light green
+        elif match_record.correct is False:
+            bg_color = "#fbeaea"  # light red
+        else:
+            bg_color = "#f0f0f0"  # neutral gray for unknown
+
+        card = tk.Frame(
+            parent,
+            bd=1,
+            relief="solid",
+            bg=bg_color,
+            padx=8,
+            pady=8,
+        )
         card.grid(row=0, column=match_index, padx=6, sticky="n")
 
-        ttk.Label(
+        tk.Label(
             card,
             text=f"MatchRecord[{match_index}]",
             font=("Consolas", 10, "bold"),
+            bg=bg_color,
+            anchor="w",
         ).pack(anchor="w")
 
         if match_record.matched_image is not None:
             match_img = self._make_thumbnail(match_record.matched_image)
-            ttk.Label(card, image=match_img).pack(pady=(4, 8))
+            tk.Label(card, image=match_img, bg=bg_color).pack(pady=(4, 8))
         else:
-            ttk.Label(
+            tk.Label(
                 card,
                 text="[No image]",
                 width=24,
                 anchor="center",
+                bg=bg_color,
             ).pack(pady=(4, 8))
 
         distance_text = (
@@ -178,11 +197,13 @@ class ImageRecordMatchViewer:
             f"Correct: {match_record.correct}"
         )
 
-        ttk.Label(
+        tk.Label(
             card,
             text=info,
             justify="left",
             font=("Consolas", 10),
+            bg=bg_color,
+            anchor="w",
         ).pack(anchor="w")
 
     def next_page(self):
