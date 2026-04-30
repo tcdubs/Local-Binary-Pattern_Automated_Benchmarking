@@ -34,7 +34,7 @@ cropping:
   random_crop: false
 
 output:
-  csv_filename: "matches"
+  csv_filename: "auto"  # File name for csv. If auto, generates a descriptive name from config.
   pdf_filename: "matches"
   visualize: true
 

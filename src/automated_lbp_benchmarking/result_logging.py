@@ -43,6 +43,49 @@ def save_matches_csv(image_records: Sequence[ImageRecord], out_path: str = "matc
                     match_record.correct,
                 ])
                 
+def generate_config_filename(config_dict: dict) -> str:
+    filename_parts = []
+    
+    # Pattern type (LBP or LTP)
+    if config_dict["local_binary_patterns"]["use_ltp"]:
+        filename_parts.append("ltp")
+    else:
+        filename_parts.append("lbp")
+    
+    # Method
+    method = config_dict["local_binary_patterns"]["method"]
+    filename_parts.append(method)
+    
+    # P and R parameters
+    p = config_dict["local_binary_patterns"]["P"]
+    r = config_dict["local_binary_patterns"]["R"]
+    filename_parts.append(f"p{p}_r{int(r) if r == int(r) else r}")
+    
+    # Preprocessing parameters
+    preprocessing = config_dict["preprocessing"]
+    if preprocessing["gaussian_noise"] is not None:
+        noise_val = int(preprocessing["gaussian_noise"] * 100)
+        filename_parts.append(f"noise{noise_val}")
+    
+    if preprocessing["gaussian_blur"] is not None:
+        blur_val = int(preprocessing["gaussian_blur"] * 10)
+        filename_parts.append(f"blur{blur_val}")
+    
+    if preprocessing["illumination"] is not None:
+        illum_val = int(preprocessing["illumination"] * 100)
+        filename_parts.append(f"illum{illum_val}")
+    
+    if preprocessing["contrast"] is not None:
+        contrast_val = int(preprocessing["contrast"] * 100)
+        filename_parts.append(f"contrast{contrast_val}")
+    
+    # Matching parameters
+    metric = config_dict["matching"]["metric"]
+    filename_parts.append(f"{metric}")
+    
+    return "_".join(filename_parts)
+
+
 def print_verbose_report(records: Sequence[ImageRecord]) -> None:
     total = len(records)
     correct_count = 0

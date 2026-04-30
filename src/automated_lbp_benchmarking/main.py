@@ -20,7 +20,8 @@ from .processed_to_raw_image_matching import ProcessedToRawMatcher
 from .match_statistics import compute_match_distance_stats
 from .visualization import visualize_image_records
 from .save_visualization_as_pdf import create_image_record_match_pdf
-from .result_logging import save_matches_csv
+from .result_logging import save_matches_csv, generate_config_filename
+
 
 def main(return_results, cli_args=None) -> Optional[dict]:
     start = time.time()
@@ -79,7 +80,10 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     print(stats)
 
     if config_dict["output"]["csv_filename"] is not None:
-        save_matches_csv(processed_matched_records, config_dict["output"]["csv_filename"])
+        csv_filename = config_dict["output"]["csv_filename"]
+        if csv_filename.lower() == "auto":
+            csv_filename = generate_config_filename(config_dict)
+        save_matches_csv(processed_matched_records, csv_filename)
     
     if config_dict["output"]["pdf_filename"] is not None:
         create_image_record_match_pdf(
