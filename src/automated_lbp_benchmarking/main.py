@@ -20,7 +20,7 @@ from .processed_to_raw_image_matching import ProcessedToRawMatcher
 from .match_statistics import compute_match_distance_stats
 from .visualization import visualize_image_records
 from .save_visualization_as_pdf import create_image_record_match_pdf
-from .result_logging import save_matches_csv, generate_config_filename
+from .result_logging import save_matches_csv
 from datetime import datetime
 
 
