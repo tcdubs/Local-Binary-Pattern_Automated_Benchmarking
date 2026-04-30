@@ -163,7 +163,18 @@ class ImageRecordMatchViewer:
             padx=8,
             pady=8,
         )
-        card.grid(row=0, column=match_index, padx=6, sticky="n")
+
+        max_match_columns = 5
+        match_row = match_index // max_match_columns
+        match_col = match_index % max_match_columns
+
+        card.grid(
+            row=match_row,
+            column=match_col,
+            padx=6,
+            pady=6,
+            sticky="n",
+        )
 
         tk.Label(
             card,
