@@ -57,9 +57,9 @@ data_engineering:
   histogram_smoothing: null
 
 output:
-  csv_filename: null
-  pdf_filename: null
-  visualize: true
+  save_csv: true
+  save_pdf: false
+  visualize: false
 
 logging:
   verbose: false

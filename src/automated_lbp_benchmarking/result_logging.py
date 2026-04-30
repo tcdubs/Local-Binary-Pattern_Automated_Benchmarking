@@ -5,21 +5,15 @@ from typing import Sequence
 from .image_data_containers import ImageRecord
 from datetime import datetime
 
-def save_matches_csv(image_records: Sequence[ImageRecord], out_path: str = "matches") -> None:
+def save_matches_csv(image_records: Sequence[ImageRecord], timestamp: str) -> str:
     # Find root project director (hardcoded, probably shouldn't do this)
     project_root = Path(__file__).resolve().parents[2]
     
     # Build results directory path
-    results_dir = project_root / "results"
+    results_dir = project_root / "results" / timestamp
     results_dir.mkdir(exist_ok=True)
-    
-    # Use the provided out_path as the filename, only add timestamp if not specified
-    if out_path.endswith('.csv'):
-        output_path = results_dir / out_path
-    else:
-        # If not a csv, add timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_path = results_dir / f"{out_path}_{timestamp}.csv"
+
+    output_path = results_dir / "match_results.csv"
     
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -42,6 +36,7 @@ def save_matches_csv(image_records: Sequence[ImageRecord], out_path: str = "matc
                     match_record.nn_distance,
                     match_record.correct,
                 ])
+    return results_dir
                 
 def generate_config_filename(config_dict: dict) -> str:
     filename_parts = []

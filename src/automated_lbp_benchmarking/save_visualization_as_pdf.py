@@ -306,7 +306,7 @@ def _build_image_record_row(
 
 def create_image_record_match_pdf(
     image_records: Sequence[ImageRecord],
-    output_path: str | Path = "image_record_matches.pdf",
+    timestamp: str,
     stats=None,
     config=None,
     records_per_page: int = 8,
@@ -316,7 +316,7 @@ def create_image_record_match_pdf(
     main_card_width: int = 105,
     match_card_width: int = 100,
     matches_per_row: int = 5,
-) -> None:
+) -> str:
     """
     Create a paginated PDF visualization of ImageRecord objects and MatchRecord cards.
 
@@ -345,7 +345,13 @@ def create_image_record_match_pdf(
         matches_per_row:
             Number of MatchRecord cards before wrapping to a new row.
     """
-    output_path = Path(output_path)
+    project_root = Path(__file__).resolve().parents[2]
+    
+    # Build results directory path
+    results_dir = project_root / "results" / timestamp
+    results_dir.mkdir(exist_ok=True)
+
+    output_path = results_dir / "match_results.pdf"
 
     doc = SimpleDocTemplate(
         str(output_path),
@@ -420,3 +426,4 @@ def create_image_record_match_pdf(
             elements.append(PageBreak())
 
     doc.build(elements)
+    return results_dir
