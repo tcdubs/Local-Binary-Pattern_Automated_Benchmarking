@@ -16,6 +16,19 @@ def center_crop_pil(im: Image.Image, X: int, Y: int, rng: np.random.Generator) -
         y_start = (h - Y) // 2
     return im.crop((x_start, y_start, x_start + X, y_start + Y))
 
+from PIL import Image
+
+def resize_pil(im: Image.Image, width: int, height: int, resample: str = "lanczos") -> Image.Image:
+    """Resize a PIL image to the specified width and height using the specified resampling method."""
+    resample_map = {
+        "lanczos": Image.Resampling.LANCZOS,
+        "bicubic": Image.Resampling.BICUBIC,
+        "bilinear": Image.Resampling.BILINEAR,
+        "nearest": Image.Resampling.NEAREST,
+    }
+    method = resample_map.get(resample.lower(), Image.Resampling.LANCZOS)
+    return im.resize((width, height), resample=method)
+
 # NumPy image pre-processing
 def apply_gaussian_noise(image_as_array: np.ndarray, mean: float = 0, stddev: float = 10, rng: np.random.Generator = None) -> np.ndarray:
     """Apply Gaussian noise to a NumPy image array."""
@@ -42,11 +55,6 @@ def add_gaussian_blur(image_as_array: np.ndarray, sigma = 1.0) -> np.ndarray:
     blurred_arr = gaussian_filter(image_as_array, sigma=sigma)
     return np.clip(blurred_arr, 0, 255).astype(np.uint8)
 
-# PIL Image post-processing
-def pil_resize(im: Image.Image, size: tuple) -> Image.Image:
-    """Resize a PIL image to the given size."""
-    return im.resize(size, resample=Image.BILINEAR)
-
 def apply_processing(image: Image.Image, processing_args: Dict, rng: np.random.Generator) -> np.ndarray:
     """Apply all processing steps defined in cofiguration"""
     processed_image = image
@@ -60,10 +68,14 @@ def apply_processing(image: Image.Image, processing_args: Dict, rng: np.random.G
     illumination_factor = processing_args["preprocessing"]["illumination"]
     contrast_factor = processing_args["preprocessing"]["contrast"]
 
+    # PIL image processing steps
     crop_rng = rng if random_crop else None
     if processing_args["cropping"]["width"] and processing_args["cropping"]["height"]:
         processed_image = center_crop_pil(processed_image, processing_args["cropping"]["width"], processing_args["cropping"]["height"], crop_rng)
+    if processing_args["resampling"]["width"] and processing_args["resampling"]["height"]:
+        processed_image = resize_pil(processed_image, processing_args["resampling"]["width"], processing_args["resampling"]["height"], processing_args["resampling"]["method"])
 
+    # Convert to nparray and perform image as a 2d-array processing steps
     image_as_array = np.asarray(processed_image, dtype=np.uint8)
     if gaussian_noise and gaussian_noise > 0:
         image_as_array = apply_gaussian_noise(image_as_array, stddev=gaussian_noise, rng=rng) 

@@ -32,6 +32,11 @@ query_image_processing:
     height: null
     random_crop: false
 
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"   # [lanczos, bilinear, nearest, bicubic]
+
 # Processing to apply to images being matched against
 # These values should be left null if wanting to test processed images against their raw counterparts 
 target_image_processing:
@@ -46,13 +51,18 @@ target_image_processing:
     height: null
     random_crop: false
 
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"   # [lanczos, bilinear, nearest, bicubic]
+
 data_engineering:
   histogram_smoothing: null
 
 output:
   csv_filename: null
   pdf_filename: null
-  visualize: true
+  visualize: false
 
 logging:
   verbose: false
