@@ -4,6 +4,7 @@ import argparse
 import yaml
 import pdb
 import traceback
+import time
 
 from typing import Optional
 from pathlib import Path
@@ -11,11 +12,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from .image_file_handling import get_images_in_folder_as_image_records
-from skimage.feature import local_binary_pattern as skimage_lbp
-from .visualize_matches_mvc import visualize_matches
 from .local_binary_pattern_processing import LBPResult, LTPResult, local_binary_pattern, local_ternary_pattern
 from .local_binary_pattern_processing import local_ternary_pattern, LTPResult
-from datetime import datetime
 from .image_processing import apply_processing
 from skimage.color import rgb2gray
 from .processed_to_raw_image_matching import ProcessedToRawMatcher
@@ -25,6 +23,7 @@ from .save_visualization_as_pdf import create_image_record_match_pdf
 from .result_logging import save_matches_csv
 
 def main(return_results, cli_args=None) -> Optional[dict]:
+    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -94,6 +93,11 @@ def main(return_results, cli_args=None) -> Optional[dict]:
 
     if config_dict["output"]["visualize"]:
         visualize_image_records(processed_matched_records, 50)
+
+    if return_results:
+        end = time.time()
+        total_time = end - start
+        return f"Total time: {total_time:.4f} seconds"
 
 
 if __name__ == "__main__":
