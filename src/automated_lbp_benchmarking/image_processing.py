@@ -4,7 +4,7 @@ from typing import Dict
 
 # PIL image pre-processing
 def center_crop_pil(im: Image.Image, X: int, Y: int, rng: np.random.Generator) -> Image.Image:
-    """Random-crop a PIL image to X-by-Y."""
+    """Crop a PIL image to X-by-Y."""
     w, h = im.size
     X = min(X, w)
     Y = min(Y, h)

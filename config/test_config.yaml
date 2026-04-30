@@ -8,35 +8,51 @@ rng:
 local_binary_patterns:
   P: 8
   R: 1.0
-  method: "uniform"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
+  method: "ror"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
   use_ltp: false   # if true, uses Local Ternary Patterns instead of LBP
   ltp:
     threshold: 5     # threshold for generating LTP codes (during neighbor coparison, differences in threshold will be encoded as 0)
     use_image_mask: false   # if true, uses a mask of valid pixels for LTP (e.g. to avoid borders)
 
 matching:
-  metric: "chi2"      # [chi2, cosine, hellinger]
-  tolerance: 0.1     # tolerance for matching histograms. Matches will only be reported if distance is below this threshold. Set to 1 to allow all matches.
-  top: 10          # Number of matches to report per image. Tolerance takes precedence.
+  metric: "hellinger"      # [chi2, cosine, hellinger]
+  tolerance: 1     # tolerance for matching histograms. Matches will only be reported if distance is below this threshold. Set to 1 to allow all matches.
+  top: 3          # Number of matches to report per image. Tolerance takes precedence.
 
-preprocessing:
-  gaussian_blur: 1
-  gaussian_noise: 10
-  illumination: 1.5
-  contrast: 1.5
+# Processing to apply to image being matched against a set
+query_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
+
+# Processing to apply to images being matched against
+# These values should be left null if wanting to test processed images against their raw counterparts 
+target_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
 
 data_engineering:
   histogram_smoothing: null
 
-cropping:
-  width: 128
-  height: 128
-  random_crop: true
-
 output:
   csv_filename: null
   pdf_filename: null
-  visualize: false
+  visualize: true
 
 logging:
   verbose: false

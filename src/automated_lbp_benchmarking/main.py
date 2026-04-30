@@ -48,18 +48,21 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     use_ltp = config_dict["local_binary_patterns"]["use_ltp"]
     ltp_threshold = config_dict["local_binary_patterns"]["ltp"]["threshold"]
     for record in raw_image_records:
-        gray_image = record.image.convert("L")
-        image_array = np.asarray(gray_image, dtype=np.uint8)
+        processed_image = record.image
+        processed_image = apply_processing(processed_image, processing_args=config_dict["target_image_processing"], rng=rng)
+        gray_image = rgb2gray(processed_image)
+        image_array = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions   
         if use_ltp:
             ltp_result: LTPResult = local_ternary_pattern(image_array, p=p, r=r, method=method, threshold=ltp_threshold)
             record.lbp_hist = ltp_result.histogram
         else:
             lbp_result: LBPResult = local_binary_pattern(image_array, p=p, r=r, method=method)
             record.lbp_hist = lbp_result.histogram
+        record.image = Image.fromarray(processed_image)
 
     for record in working_image_records:
         processed_image = record.image
-        processed_image = apply_processing(processed_image, processing_args=config_dict, rng=rng)
+        processed_image = apply_processing(processed_image, processing_args=config_dict["query_image_processing"], rng=rng)
         gray_image = rgb2gray(processed_image)
         gray_image = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions   
         if use_ltp:
