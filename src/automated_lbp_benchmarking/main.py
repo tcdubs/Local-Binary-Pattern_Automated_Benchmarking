@@ -14,7 +14,7 @@ from PIL import Image
 from .image_file_handling import get_images_in_folder_as_image_records
 from .local_binary_pattern_processing import LBPResult, LTPResult, local_binary_pattern, local_ternary_pattern
 from .local_binary_pattern_processing import local_ternary_pattern, LTPResult
-from .image_processing import apply_processing
+from .image_processing import apply_PIL_processing, apply_numpy_processing
 from skimage.color import rgb2gray
 from .processed_to_raw_image_matching import ProcessedToRawMatcher
 from .match_statistics import compute_match_distance_stats
@@ -50,7 +50,9 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     ltp_threshold = config_dict["local_binary_patterns"]["ltp"]["threshold"]
     for record in raw_image_records:
         processed_image = record.image
-        processed_image = apply_processing(processed_image, processing_args=config_dict["target_image_processing"], rng=rng)
+        processed_image = apply_PIL_processing(processed_image, processing_args=config_dict["target_image_processing"], rng=rng)
+        processed_image = apply_numpy_processing(processed_image, processing_args=config_dict["target_image_processing"], rng=rng)
+        record.image = Image.fromarray(processed_image)
         gray_image = rgb2gray(processed_image)
         image_array = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions   
         if use_ltp:
@@ -59,20 +61,20 @@ def main(return_results, cli_args=None) -> Optional[dict]:
         else:
             lbp_result: LBPResult = local_binary_pattern(image_array, p=p, r=r, method=method)
             record.lbp_hist = lbp_result.histogram
-        record.image = Image.fromarray(processed_image)
 
     for record in working_image_records:
         processed_image = record.image
-        processed_image = apply_processing(processed_image, processing_args=config_dict["query_image_processing"], rng=rng)
+        processed_image = apply_PIL_processing(processed_image, processing_args=config_dict["query_image_processing"], rng=rng)
+        processed_image = apply_numpy_processing(processed_image, processing_args=config_dict["query_image_processing"], rng=rng)
+        record.image = Image.fromarray(processed_image)
         gray_image = rgb2gray(processed_image)
-        gray_image = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions   
+        image_array = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions   
         if use_ltp:
-            ltp_result: LTPResult = local_ternary_pattern(gray_image, p=p, r=r, method=method, threshold=ltp_threshold)
+            ltp_result: LTPResult = local_ternary_pattern(image_array, p=p, r=r, method=method, threshold=ltp_threshold)
             record.lbp_hist = ltp_result.histogram
         else:
-            lbp_result: LBPResult = local_binary_pattern(gray_image, p=p, r=r, method=method)
+            lbp_result: LBPResult = local_binary_pattern(image_array, p=p, r=r, method=method)
             record.lbp_hist = lbp_result.histogram
-        record.image = Image.fromarray(processed_image)
         
     distance_metric = config_dict["matching"]["metric"]
     match_tolerance = config_dict["matching"]["tolerance"]

@@ -62,7 +62,7 @@ data_engineering:
 output:
   csv_filename: null
   pdf_filename: null
-  visualize: false
+  visualize: true
 
 logging:
   verbose: false
