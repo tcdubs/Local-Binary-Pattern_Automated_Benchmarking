@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 from skimage.feature import local_binary_pattern as skimage_lbp
+from scipy.ndimage import gaussian_filter1d
 
 import numpy as np
 
@@ -235,6 +236,7 @@ def _get_histogram(
     mask: np.ndarray | None = None,
     eps: float = 1e-6,
     normalize: bool = False,
+    smooth_sigma: float | None = None,
 ) -> np.ndarray:
     """Compute an L1-normalized histogram for encoded code values."""
     flat = codes.ravel()
@@ -246,6 +248,8 @@ def _get_histogram(
         flat = flat[np.asarray(mask, dtype=bool).ravel()]
 
     hist = np.bincount(flat, minlength=n_bins).astype(np.float32)
+    if smooth_sigma is not None and smooth_sigma > 0:
+        hist = gaussian_filter1d(hist, sigma=1.0, mode="nearest")
     if normalize:
         hist /= hist.sum() + eps
     return hist
@@ -319,6 +323,7 @@ def local_binary_pattern(
     r: float = 1.0,
     method: str = "ror",
     mask: np.ndarray | None = None,
+    smooth_sigma: float | None = None,
 ) -> LBPResult:
     """Compute Local Binary Pattern features for a grayscale image."""
     codes_raw: np.ndarray = skimage_lbp(gray, P=p, R=r, method=method).astype(np.uint32)
@@ -334,6 +339,8 @@ def local_binary_pattern(
         range=(0, n_bins)
     )
     hist = hist.astype(np.float32)
+    if smooth_sigma is not None and smooth_sigma > 0:
+        hist = gaussian_filter1d(hist, sigma=smooth_sigma, mode="nearest")
     hist /= hist.sum() + 1e-6
     return LBPResult(
         codes=codes_raw,

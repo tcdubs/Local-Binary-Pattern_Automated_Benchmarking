@@ -6,27 +6,28 @@ rng:
   seed: 42
 
 texture_extraction:
-  local_binary_pattern:
+  local_ternary_pattern:
     P: 8
     R: 1.0
+    threshold: 5
     method: "ror"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
 
 matching:
   metric: "hellinger"      # [chi2, cosine, hellinger]
   tolerance: 1     # tolerance for matching histograms. Matches will only be reported if distance is below this threshold. Set to 1 to allow all matches.
-  top: 50          # Number of matches to report per image. Tolerance takes precedence.
+  top: 5          # Number of matches to report per image. Tolerance takes precedence.
 
 # Processing to apply to image being matched against a set
 query_image_processing:
   preprocessing:
     gaussian_blur: null
-    gaussian_noise: null
+    gaussian_noise: 10
     illumination: null
     contrast: null
     
   cropping:
-    width: null
-    height: null
+    width: 256
+    height: 256
     random_crop: false
 
   resampling:

@@ -1,0 +1,118 @@
+# Alternative approach to distance matching using vectorization
+# Not a significant enough reduction in compute time to justify switching
+# the existing distance computation logic out, since the distance computations
+# are more plug-and-play in the current implementation. However, it may be worth
+# switching to this approach if using much larger datasets.
+
+from dataclasses import dataclass
+from typing import Callable, Optional, Sequence
+
+import numpy as np
+
+from .distance_metrics import chi2_distance, get_distance_metric
+from .image_data_containers import ImageRecord, MatchRecord
+
+
+@dataclass
+class ProcessedToRawMatcher:
+    distance_fn: Callable[[np.ndarray, np.ndarray], float] = chi2_distance
+    metric_name: str = "chi2"
+    tolerance: Optional[float] = 1
+    top: Optional[int] = 1
+
+    def __call__(
+        self,
+        processed_records: Sequence[ImageRecord],
+        raw_records: Sequence[ImageRecord],
+    ) -> Sequence[ImageRecord]:
+        tolerance = 1 if self.tolerance is None else self.tolerance
+        top = 1 if self.top is None else self.top
+
+        if not processed_records or not raw_records:
+            raise ValueError("No records provided for matching.")
+
+        distance_fn = (
+            get_distance_metric(self.metric_name)
+            if self.metric_name
+            else self.distance_fn
+        )
+
+        raw_hists = np.asarray(
+            [np.asarray(r.lbp_hist, dtype=np.float64) for r in raw_records],
+            dtype=np.float64,
+        )
+
+        for record_index, proc_record in enumerate(processed_records):
+            proc_record.index = record_index
+            proc_hist = np.asarray(proc_record.lbp_hist, dtype=np.float64)
+
+            distances = self._compute_vectorized_distances(
+                proc_hist=proc_hist,
+                raw_hists=raw_hists,
+                distance_fn=distance_fn,
+            )
+
+            valid_indices = np.where(distances <= tolerance)[0]
+
+            if len(valid_indices) == 0:
+                proc_record.match_records = []
+                continue
+
+            top_indices = valid_indices[
+                np.argsort(distances[valid_indices])[:top]
+            ]
+
+            proc_record.match_records = [
+                MatchRecord(
+                    matched_index=int(i),
+                    matched_category=raw_records[i].category,
+                    nn_distance=float(distances[i]),
+                    correct=(raw_records[i].category == proc_record.category),
+                    matched_image=getattr(raw_records[i], "image", None),
+                )
+                for i in top_indices
+            ]
+
+        return processed_records
+
+    @staticmethod
+    def _compute_vectorized_distances(
+        proc_hist: np.ndarray,
+        raw_hists: np.ndarray,
+        distance_fn: Callable[[np.ndarray, np.ndarray], float],
+    ) -> np.ndarray:
+        """
+        Compute distances from one processed/query histogram to all raw/target
+        histograms.
+
+        Uses vectorized implementations for known metrics, while keeping a
+        fallback for custom distance functions.
+        """
+        metric_name = getattr(distance_fn, "__name__", "").lower()
+
+        if "chi2" in metric_name or "chi" in metric_name:
+            return 0.5 * np.sum(
+                ((raw_hists - proc_hist) ** 2)
+                / (raw_hists + proc_hist + 1e-10),
+                axis=1,
+            )
+
+        if "hellinger" in metric_name:
+            return (1.0 / np.sqrt(2.0)) * np.linalg.norm(
+                np.sqrt(raw_hists) - np.sqrt(proc_hist),
+                axis=1,
+            )
+
+        if "cosine" in metric_name:
+            numerator = raw_hists @ proc_hist
+            denominator = (
+                np.linalg.norm(raw_hists, axis=1)
+                * np.linalg.norm(proc_hist)
+                + 1e-10
+            )
+            return 1.0 - (numerator / denominator)
+
+        return np.asarray(
+            [distance_fn(proc_hist, raw_hist) for raw_hist in raw_hists],
+            dtype=np.float64,
+        )
