@@ -306,7 +306,7 @@ def _build_image_record_row(
 
 def create_image_record_match_pdf(
     image_records: Sequence[ImageRecord],
-    timestamp: str,
+    results_dir: str,
     stats=None,
     config=None,
     records_per_page: int = 8,
@@ -345,14 +345,8 @@ def create_image_record_match_pdf(
         matches_per_row:
             Number of MatchRecord cards before wrapping to a new row.
     """
-    project_root = Path(__file__).resolve().parents[2]
-    
-    # Build results directory path
-    results_dir = project_root / "results" / timestamp
-    results_dir.mkdir(exist_ok=True)
 
     output_path = results_dir / "match_results.pdf"
-
     doc = SimpleDocTemplate(
         str(output_path),
         pagesize=page_size,

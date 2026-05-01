@@ -58,7 +58,7 @@ data_engineering:
 
 output:
   save_csv: true
-  save_pdf: false
+  save_pdf: true
   visualize: false
 
 logging:

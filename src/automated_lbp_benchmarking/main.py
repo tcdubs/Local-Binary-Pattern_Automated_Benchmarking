@@ -58,7 +58,7 @@ def main(return_results, cli_args=None) -> Optional[dict]:
             record.image = Image.fromarray(processed_image)
             gray_image = rgb2gray(processed_image)
             image_array = (gray_image * 255).astype(np.uint8)  # Convert to uint8 format expected by LBP functions  
-            hist = get_texture_feature_vector(image_array, config_dict).histogram
+            hist = get_texture_feature_vector(image_array, config_dict)
             record.lbp_hist = hist
         
     # Perform matching of query rectords (processed) to target records (raw)
@@ -70,15 +70,22 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     stats = compute_match_distance_stats(processed_matched_records)
     print(stats)
 
+    if config_dict["output"]["save_csv"] or config_dict["output"]["save_pdf"]:
+        project_root = Path(__file__).resolve().parents[2]
+        config_name = Path(args.config)
+        config_name = config_name.stem
+    
+    # Build results directory path
+        results_dir = project_root / "results" / config_name
+        results_dir.mkdir(exist_ok=True)
     # Save results files
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if config_dict["output"]["save_csv"]:
-        output_dir = save_matches_csv(processed_matched_records, timestamp)
+        if config_dict["output"]["save_csv"]:
+            output_dir = save_matches_csv(processed_matched_records, results_dir)
     
     if config_dict["output"]["save_pdf"]:
         output_dir = create_image_record_match_pdf(
             image_records=processed_matched_records,
-            timestamp=timestamp,
+            results_dir=results_dir,
             stats=stats,
             config=config_dict,
             records_per_page=5,
