@@ -10,7 +10,6 @@ import numpy as np
 
 LTPMethod = Literal["default", "ror", "uniform"]
 
-
 @dataclass(frozen=True)
 class LTPResult:
     """Container for Local Ternary Pattern outputs.
@@ -29,6 +28,22 @@ class LTPResult:
 class LBPResult:
     """Container for Local Binary Pattern output."""
     codes: np.ndarray
+    histogram: np.ndarray
+
+@dataclass(frozen=True)
+class CLBPResult:
+    """Container for Completed Local Binary Pattern output.
+
+    Attributes:
+        codes_s: Sign component codes.
+        codes_m: Magnitude component codes.
+        codes_c: Center component codes.
+        histogram: Concatenated normalized histogram [S, M, C].
+    """
+
+    codes_s: np.ndarray
+    codes_m: np.ndarray
+    codes_c: np.ndarray
     histogram: np.ndarray
 
 def _validate_gray_image(gray: np.ndarray) -> np.ndarray:
@@ -249,7 +264,7 @@ def _get_histogram(
 
     hist = np.bincount(flat, minlength=n_bins).astype(np.float32)
     if smooth_sigma is not None and smooth_sigma > 0:
-        hist = gaussian_filter1d(hist, sigma=1.0, mode="nearest")
+        hist = gaussian_filter1d(hist, sigma=smooth_sigma, mode="nearest")
     if normalize:
         hist /= hist.sum() + eps
     return hist
@@ -345,4 +360,146 @@ def local_binary_pattern(
     return LBPResult(
         codes=codes_raw,
         histogram=hist,
+    )
+
+def _compute_clbp_codes(
+    gray: np.ndarray,
+    p: int,
+    r: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute sign-based, magnitue-based, and center pixel-based codes."""
+    if p <= 0:
+        raise ValueError(f"`p` parameter must be positive. p given: {p}.")
+    if p > 31:
+        raise ValueError(
+            "`p` values must be less than 32."
+        )
+    if r <= 0:
+        raise ValueError(f"`r` must be positive. r given was: {r}.")
+
+    h, w = gray.shape
+    # create array of coordinate points for pixels in the image
+    yy, xx = np.meshgrid(
+        np.arange(h, dtype=np.float32),
+        np.arange(w, dtype=np.float32),
+        indexing="ij",
+    )
+
+    center = gray
+    diffs = np.empty((p, h, w), dtype=np.float32)
+
+    codes_s = np.zeros((h, w), dtype=np.uint32)
+    codes_m = np.zeros((h, w), dtype=np.uint32)
+
+    # Iterate over neighbors in a circular pattern, compute differences, and set bits for sign and magnitude codes
+    # Uses bilinear sampling for cases where provided radius parameter does not land exactly on pixel coordinates
+    for i in range(p):
+        theta = 2.0 * np.pi * i / p
+        dy = -r * np.sin(theta)
+        dx = r * np.cos(theta)
+
+        neighbor = _bilinear_sample(gray, yy + dy, xx + dx)
+        diff = neighbor - center
+        diffs[i] = diff
+
+        sign_bit = diff >= 0
+        codes_s |= sign_bit.astype(np.uint32) << i
+
+    magnitudes = np.abs(diffs)
+    magnitude_threshold = float(magnitudes.mean())
+
+    for i in range(p):
+        magnitude_bit = magnitudes[i] >= magnitude_threshold
+        codes_m |= magnitude_bit.astype(np.uint32) << i
+
+    center_threshold = float(center.mean())
+    codes_c = (center >= center_threshold).astype(np.int32)
+
+    return codes_s, codes_m, codes_c
+
+
+def completed_local_binary_pattern(
+    gray: np.ndarray,
+    p: int = 8,
+    r: float = 1.0,
+    *,
+    method: LTPMethod = "uniform",
+    mask: np.ndarray | None = None,
+    equal_weight_components: bool = True,
+    smooth_sigma: float | None = None,
+) -> CLBPResult:
+    """Compute Completed Local Binary Pattern features for a grayscale image.
+
+    CLBP has three components:
+    - CLBP-S: sign pattern, similar to regular LBP
+    - CLBP-M: magnitude pattern, based on absolute neighbor-center differences, similat to LTP but with automatic thresholding
+    - CLBP-C: center pixel pattern, based on global center intensity
+
+    The final feature vector is a concatenation of:
+        histogram(CLBP-S), histogram(CLBP-M), histogram(CLBP-C)
+    where each are normalized prior to concatenation, and nomalizaed again after concacenation.
+
+    Args:
+        gray: 2D grayscale image, expected as a uint8 numpy array.
+        p: Number of circular neighbors.
+        r: Sampling radius in pixels.
+        method: Encoding method for S and M components:
+            - "default": raw binary codes
+            - "ror": rotation-invariant via minimum circular bit rotation
+            - "uniform": uniform-pattern encoding
+        mask: Optional boolean mask restricting which pixels contribute to histograms.
+        equal_weight_components: Whether to normalize each component before concatenation.
+        smooth_sigma: Optional Gaussian smoothing sigma for histograms.
+
+    Returns:
+        CLBPResult containing CLBP codes and normalized histogram.
+    """
+    # Makes sure input is grayscale and convert to float32
+    gray_f = _validate_gray_image(gray)
+
+    # Compute raw CLBP codes for sign, magnitude, and center components
+    codes_s_raw, codes_m_raw, codes_c = _compute_clbp_codes(
+        gray=gray_f,
+        p=p,
+        r=r,
+    )
+    # Encode sign and magnitude codes according to the requested method ('ror' for rotation invariance, 'uniform' for efficient bin count)
+    codes_s, n_bins_s = _encode_codes(codes_s_raw, p=p, method=method)
+    codes_m, n_bins_m = _encode_codes(codes_m_raw, p=p, method=method)
+
+    # Convert each 2D array of codes into a normalized histogram to act as a feature vector.
+    hist_s = _get_histogram(
+        codes_s,
+        n_bins=n_bins_s,
+        mask=mask,
+        normalize=equal_weight_components,
+        smooth_sigma=smooth_sigma,
+    )
+    hist_m = _get_histogram(
+        codes_m,
+        n_bins=n_bins_m,
+        mask=mask,
+        normalize=equal_weight_components,
+        smooth_sigma=smooth_sigma,
+    )
+    hist_c = _get_histogram(
+        codes_c,
+        n_bins=2,
+        mask=mask,
+        normalize=equal_weight_components,
+        smooth_sigma=smooth_sigma,
+    )
+
+    # Combine the three histograms in a single feature vector and normalize one final time
+    histogram = np.concatenate([hist_s, hist_m, hist_c]).astype(
+        np.float32,
+        copy=False,
+    )
+    histogram /= histogram.sum() + 1e-6
+
+    return CLBPResult(
+        codes_s=codes_s,
+        codes_m=codes_m,
+        codes_c=codes_c,
+        histogram=histogram,
     )

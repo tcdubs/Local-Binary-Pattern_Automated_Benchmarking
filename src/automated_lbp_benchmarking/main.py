@@ -25,7 +25,6 @@ from datetime import datetime
 
 
 def main(return_results, cli_args=None) -> Optional[dict]:
-    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -47,6 +46,7 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     # Perform image preprocessing and texture extraction for both raw and working image records
     # Generally, raw image records should have minimal processing, while processed records will
     # have more aggressive processing to simulate noise, illumination, and other real-world conditions
+    start = time.time()
     for records, processing_config in [
         (raw_image_records, config_dict["target_image_processing"]),
         (working_image_records, config_dict["query_image_processing"]),
@@ -68,7 +68,9 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     matcher = ProcessedToRawMatcher(metric_name=distance_metric, tolerance=match_tolerance, top=top_k)
     processed_matched_records = matcher(working_image_records, raw_image_records)
     stats = compute_match_distance_stats(processed_matched_records)
+    end = time.time()
     print(stats)
+    print(f"Total time to process and match images: {end - start:.4f} seconds")
 
     if config_dict["output"]["save_csv"] or config_dict["output"]["save_pdf"]:
         project_root = Path(__file__).resolve().parents[2]
@@ -99,7 +101,6 @@ def main(return_results, cli_args=None) -> Optional[dict]:
 
     # Return results (use for multiparam sweeps)
     if return_results:
-        end = time.time()
         total_time = end - start
         return f"Total time: {total_time:.4f} seconds"
 

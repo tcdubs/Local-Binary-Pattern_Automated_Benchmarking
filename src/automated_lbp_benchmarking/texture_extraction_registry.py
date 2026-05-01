@@ -1,4 +1,5 @@
-from .local_binary_pattern_processing import local_binary_pattern, local_ternary_pattern, LBPResult, LTPResult
+from .local_binary_pattern_processing import (local_binary_pattern, local_ternary_pattern, 
+                                              completed_local_binary_pattern, LBPResult, LTPResult, CLBPResult)
 import numpy as np
 
 def get_texture_feature_vector(image_array: np.ndarray, config) -> np.ndarray:
@@ -22,6 +23,14 @@ def get_texture_feature_vector(image_array: np.ndarray, config) -> np.ndarray:
             threshold=method_config["threshold"],
         ).histogram
 
+    elif method_name == "completed_local_binary_pattern":
+        result = completed_local_binary_pattern(
+            image_array,
+            p=method_config["P"],
+            r=method_config["R"],
+            method=method_config["method"],
+        ).histogram
+
     elif method_name == "multi_scale":
         all_hists = []
         for nested_cfg in method_config:
@@ -30,9 +39,7 @@ def get_texture_feature_vector(image_array: np.ndarray, config) -> np.ndarray:
             hist = np.asarray(result, dtype=np.float32)
             all_hists.append(hist)
 
-        # Concatnate all scales
         multi_hist = np.concatenate(all_hists)
-        # Optional: normalize final vector
         multi_hist /= multi_hist.sum() + 1e-6
         return multi_hist
 

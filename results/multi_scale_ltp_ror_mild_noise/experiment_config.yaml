@@ -1,6 +1,6 @@
 data:
   # folder: folder containing test set of images. Must be an absolute path, with no nested folders inside.
-  folder: LBP_Test_Images\RotatedTexturePatches_NoBorder
+  folder: LBP_Test_Images/RotatedTexturePatches_NoBorder
 
 rng:
   seed: 42
