@@ -39,17 +39,18 @@ def main(return_results, cli_args=None) -> Optional[dict]:
         config_dict = yaml.safe_load(config)
     rng = np.random.default_rng(seed=config_dict["rng"]["seed"])
 
-    images = config_dict["data"]["folder"]
-    raw_image_records = get_images_in_folder_as_image_records(images)
-    working_image_records = get_images_in_folder_as_image_records(images)
+    query_image_folder = config_dict["data"]["query_images_folder"]
+    target_image_folder = config_dict["data"]["target_images_folder"]
+    query_image_records = get_images_in_folder_as_image_records(query_image_folder)
+    target_image_records = get_images_in_folder_as_image_records(target_image_folder)
 
     # Perform image preprocessing and texture extraction for both raw and working image records
     # Generally, raw image records should have minimal processing, while processed records will
     # have more aggressive processing to simulate noise, illumination, and other real-world conditions
     start = time.time()
     for records, processing_config in [
-        (raw_image_records, config_dict["target_image_processing"]),
-        (working_image_records, config_dict["query_image_processing"]),
+        (target_image_records, config_dict["target_image_processing"]),
+        (query_image_records, config_dict["query_image_processing"]),
     ]:
         for record in records:
             processed_image = record.image
@@ -66,7 +67,7 @@ def main(return_results, cli_args=None) -> Optional[dict]:
     match_tolerance = config_dict["matching"]["tolerance"]
     top_k = config_dict["matching"]["top"]
     matcher = ProcessedToRawMatcher(metric_name=distance_metric, tolerance=match_tolerance, top=top_k)
-    processed_matched_records = matcher(working_image_records, raw_image_records)
+    processed_matched_records = matcher(query_image_records, target_image_records)
     stats = compute_match_distance_stats(processed_matched_records)
     end = time.time()
     print(stats)
