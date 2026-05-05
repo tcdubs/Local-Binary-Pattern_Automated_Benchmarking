@@ -122,6 +122,9 @@ Controls randomness in the benchmark.
 
 
 3) Texture Extraction
+You can use either single-scale LBP or a*multi-scale configuration (not both at the same time).
+
+**Single Scale**
 ```yaml
 texture_extraction:
   local_binary_pattern:
@@ -144,6 +147,33 @@ Options:
     "uniform" → reduces dimensionality
     "var" → includes variance information
     "ltp" → Local Ternary Pattern
+
+**Multi-Scale**
+```yaml
+texture_extraction:
+  multi_scale:
+    - completed_local_binary_pattern:
+        P: 8
+        R: 1.0
+        method: "ror"
+    - completed_local_binary_pattern:
+        P: 8
+        R: 2.0
+        method: "ror"
+    - completed_local_binary_pattern:
+        P: 8
+        R: 3.0
+        method: "ror"
+```
+**multi_scale:**
+Applies LBP at multiple radii and combines the results
+    Captures both fine and coarse texture patterns
+    Each entry represents one scale (different R values)
+    Improves robustness at the cost of computation
+
+**completed_local_binary_pattern:**
+Defines one LBP configuration within the multi-scale setup
+    Uses the same parameters as single-scale LBP
 
 
 4) Matching
@@ -266,6 +296,7 @@ target_image_processing:
         "nearest" (fast, low quality)
         "bicubic" (smooth scaling)
 
+
 7) Data Engineering
 ```yaml
 data_engineering:
@@ -299,3 +330,5 @@ logging:
 **verbose:**
 true → prints detailed debugging info
 false → minimal output
+
+---
