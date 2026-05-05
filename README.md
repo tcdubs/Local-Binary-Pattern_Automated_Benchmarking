@@ -91,3 +91,211 @@ Average distance among incorrect matches: 0.008493
 **Average distance among incorrect matches:** Refer to ‘average distance among correct matches’.
 
 ---
+
+#### Configuration Guide
+
+This section explains how the configuration file works, what each parameter controls, and how to tune it for different experiments. 
+The benchmark is entirely driven by a YAML configuration file. You can modify parameters to test different feature extraction methods, matching strategies, and image transformations.
+
+1) Dataset
+```yaml
+data: 
+    folder: LBP_Test_Images/RotatedTexturePatches_NoBorder
+```
+**folder:**
+Path to the dataset used for the benchmark.
+    Must point to a directory containing only images (no nested folders)
+    Relative or absolute paths can be used (absolute is recommended)
+    Each image is expected to correspond to a texture label (used for evaluating correctness)
+
+
+2) Random Number Generator
+```yaml
+rng:
+    seed: 42
+```
+**seed:**
+Controls randomness in the benchmark.
+    Ensures reproducibility across runs
+    Affects operations like random cropping or noise
+    Use the same seed when comparing configurations
+
+
+3) Texture Extraction
+```yaml
+texture_extraction:
+  local_binary_pattern:
+    P: 8
+    R: 1.0
+    method: "uniform"
+```
+**P (number of neighbors):**
+Number of sample points around each pixel
+    Common values: 8, 16, 24
+    Higher values → more detail, but more computation
+**R (radius):**
+Distance from center pixel
+    Larger radius captures broader texture patterns
+    Small radius focuses on fine detail
+**method:**
+Options:
+    "default" → basic LBP
+    "ror" → rotation invariant
+    "uniform" → reduces dimensionality
+    "var" → includes variance information
+    "ltp" → Local Ternary Pattern
+
+
+4) Matching
+```yaml
+matching:
+  metric: "chi2"
+  tolerance: 1
+  top: 5
+```
+**metric:**
+Distance function for comparing histograms
+    Options:
+    "chi2" → best for histogram comparison
+    "cosine" → measures orientation similarity
+    "hellinger" → good probabilistic distance
+**tolerance:**
+Maximum allowed distance for a match
+    Lower value → stricter matching
+    1 → effectively disables filtering
+**top:**
+Number of matches returned per image
+
+
+5) Query Image Processing
+Applies transformations to the input/query image to simulate variations before matching.
+Set to null to disable. Otherwise provide parameter values depending on implementation.
+```yaml
+query_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
+
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"
+```
+**preprocessing**
+    **gaussian_blur:**
+    Simulates blur
+    **gaussian_noise:**
+    Adds random noise
+    **illumination:**
+    Adjust brightness
+    **contrast:**
+    Adjust contrast levels
+
+**cropping**
+    **width / height:**
+    Crop size
+    **random_crop:**
+    true → random region each run
+    false → center crop
+
+**resampling**
+    **width / height:**
+    Resize image
+    null = no resizing
+    **method**
+    Options:
+        "lanczos" (high quality, slower)
+        "bilinear" (balanced)
+        "nearest" (fast, low quality)
+        "bicubic" (smooth scaling)
+
+
+6) Target Image Processing
+Applies transformations to the dataset/target images to control how the reference images are prepared for comparison.
+Set to null to disable. Otherwise provide parameter values depending on implementation.
+```yaml
+target_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
+
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"
+```
+**preprocessing**
+    **gaussian_blur:**
+    Simulates blur
+    **gaussian_noise:**
+    Adds random noise
+    **illumination:**
+    Adjust brightness
+    **contrast:**
+    Adjust contrast levels
+
+**cropping**
+    **width / height:**
+    Crop size
+    **random_crop:**
+    true → random region each run
+    false → center crop
+
+**resampling**
+    **width / height:**
+    Resize image
+    null = no resizing
+    **method:**
+    Options:
+        "lanczos" (high quality, slower)
+        "bilinear" (balanced)
+        "nearest" (fast, low quality)
+        "bicubic" (smooth scaling)
+
+7) Data Engineering
+```yaml
+data_engineering:
+  histogram_smoothing: null
+```
+**histogram_smoothing:**
+Applies smoothing to LBP histograms
+    Helps reduce noise sensitivity
+
+
+8) Output
+```yaml
+output:
+  save_csv: true
+  save_pdf: true
+  visualize: true
+```
+**save_csv:**
+Saves raw results
+**save_pdf:**
+Saves report/visual output
+**visualize:**
+Displays match results in a GUI window
+
+
+9) Logging
+```yaml
+logging:
+  verbose: false
+```
+**verbose:**
+true → prints detailed debugging info
+false → minimal output
