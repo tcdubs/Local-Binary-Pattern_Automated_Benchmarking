@@ -1,6 +1,7 @@
 data:
-  # folder: folder containing test set of images. Must be an absolute path, with no nested folders inside.
-  folder: LBP_Test_Images/WellDefinedTextures_10Rotations_128
+
+  query_images_folder: LBP_Test_Images/WellDefinedTextures_10Rotations_128
+  target_images_folder: LBP_Test_Images/WellDefinedTextures_128
 
 rng:
   seed: 42
@@ -10,22 +11,22 @@ texture_extraction:
     - completed_local_binary_pattern:
         P: 8
         R: 1.0
-        method: "ror"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
+        method: "ror"
     - completed_local_binary_pattern:
         P: 8
         R: 2.0
-        method: "ror"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
+        method: "ror"
     - completed_local_binary_pattern:
         P: 8
         R: 3.0
-        method: "ror"   # [default, ror, uniform, var, ltp] IF use_ltp is false. Otherwise, [ror, uniform]
+        method: "ror"
 
 matching:
-  metric: "chi2"      # [chi2, cosine, hellinger]
-  tolerance: 1     # tolerance for matching histograms. Matches will only be reported if distance is below this threshold. Set to 1 to allow all matches.
-  top: 5          # Number of matches to report per image. Tolerance takes precedence.
+  metric: "chi2"
+  tolerance: 1
+  top: 1
 
-# Processing to apply to image being matched against a set
+
 query_image_processing:
   preprocessing:
     gaussian_blur: 0.5
@@ -41,10 +42,10 @@ query_image_processing:
   resampling:
     width: null
     height: null
-    method: "lanczos"   # [lanczos, bilinear, nearest, bicubic]
+    method: "lanczos"
 
-# Processing to apply to images being matched against
-# These values should be left null if wanting to test processed images against their raw counterparts 
+
+
 target_image_processing:
   preprocessing:
     gaussian_blur: null
@@ -60,15 +61,9 @@ target_image_processing:
   resampling:
     width: null
     height: null
-    method: "lanczos"   # [lanczos, bilinear, nearest, bicubic]
-
-data_engineering:
-  histogram_smoothing: null
+    method: "lanczos"
 
 output:
   save_csv: true
   save_pdf: true
   visualize: true
-
-logging:
-  verbose: false

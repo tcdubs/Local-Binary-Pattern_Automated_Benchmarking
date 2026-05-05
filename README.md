@@ -100,14 +100,25 @@ The benchmark is entirely driven by a YAML configuration file. You can modify pa
 1) Dataset
 ```yaml
 data: 
-    folder: LBP_Test_Images/RotatedTexturePatches_NoBorder
+    query_images_folder: LBP_Test_Images/WellDefinedTextures_10Rotations_128
+    target_images_folder: LBP_Test_Images/WellDefinedTextures_128
 ```
-**folder:**
-Path to the dataset used for the benchmark.
+**query_images_folder:**
+Path to dataset of images in which to be matched to a target dataset.
     Must point to a directory containing only images (no nested folders)
     Relative or absolute paths can be used (absolute is recommended)
-    Each image is expected to correspond to a texture label (used for evaluating correctness)
+    Each image is expected to abide by the following encoding scheme:
+    IDENTIFIER_TEXTURE-CLASS_DISTANCE_ROTATION_LIGHTING.imageextension
+    In cases where distance, rotation, and/or lighting values are not known
+    or sourced, using a placeholder '0' is perfectly fine-- the only truly necessary
+    part of the filename encoding schema is 'TEXTURE-CLASS', which is used to drive
+    'correct' and 'incorrect' determinations for texture matching results.
 
+**target_images_folder:**
+Path to the dataset of images in which to be used to match against.
+    Images in this set must abide by the same encoding scheme as 'query_images_folder'.
+    This dataset should remain unprocessed in standard experimental setups to test
+    matching 'noisy' query images to a stored (target) dataset.
 
 2) Random Number Generator
 ```yaml
@@ -122,9 +133,11 @@ Controls randomness in the benchmark.
 
 
 3) Texture Extraction
-You can use either single-scale LBP or a*multi-scale configuration (not both at the same time).
+This benchmarker supports the following variants of Local Binary Pattern texture extraction:
+    - Standard Local Binary Pattern
+    - Local Ternary Pattern
+    - Completed Local Binary Pattern
 
-**Single Scale**
 ```yaml
 texture_extraction:
   local_binary_pattern:
@@ -141,14 +154,26 @@ Distance from center pixel
     Larger radius captures broader texture patterns
     Small radius focuses on fine detail
 **method:**
+Method used for encoding binary strings.
+    For typical use, ror tends to be most robust to rotation, at the cost of being weak to noise and producing a
+    much larger (2^P entries) feature vector.
+    Uniform provides less rotation robustness, but stronger robustness to noise than ror, with a much smaller feature vector.
 Options:
-    "default" → basic LBP
     "ror" → rotation invariant
     "uniform" → reduces dimensionality
-    "var" → includes variance information
-    "ltp" → Local Ternary Pattern
 
-**Multi-Scale**
+**completed_local_binary_pattern:**
+Uses the same parameters as single-scale LBP. Computationally more expensive than LBP, but extracts more texture detail
+than LBP or LTP.
+
+
+Additionally, this benchmarker supports extraction of single or multiple texture feature vectors
+    per image. In the case where multiple texture feature vectors are utilized (referred to as 'Multi-Scale'), the feature vectors
+    from each distinct texture extraction operation will be concatenated. To configure this variant of texture extraction, use
+    the following pattern, which gives and example of performing Completed Local Binary Pattern analysis three times at different pixel radii. 
+    (Note: the pattern is essentially placing 'multi_scale' at the 'texure extraction tecnique' entry location
+    in the configuration, and nesting the desired texture extraction techniques inside this level as a list.)
+
 ```yaml
 texture_extraction:
   multi_scale:
@@ -165,15 +190,6 @@ texture_extraction:
         R: 3.0
         method: "ror"
 ```
-**multi_scale:**
-Applies LBP at multiple radii and combines the results
-    Captures both fine and coarse texture patterns
-    Each entry represents one scale (different R values)
-    Improves robustness at the cost of computation
-
-**completed_local_binary_pattern:**
-Defines one LBP configuration within the multi-scale setup
-    Uses the same parameters as single-scale LBP
 
 
 4) Matching
@@ -220,24 +236,37 @@ query_image_processing:
 ```
 **preprocessing**
     **gaussian_blur:**
-    Simulates blur
+    Sigma value for a gaussian filter to use on the image.
+    Values between 0 and 2 are common, with 1.0 recomennded for moderate noise or greater.
     **gaussian_noise:**
-    Adds random noise
+    Sigma value for random noise to be added to an image.
+    For 8-bit image data, the following range of values and their relative 'level of severity' are:
+    0        - no noise
+    1 to 10  - mild noise
+    11 to 20 - moderate noise
+    20+      - heavy noise
     **illumination:**
-    Adjust brightness
+    Adjust brightness through a scaling factor.
+    1.0      - no change
+    1.5      - 150% of original brightness levels
+    0.5      - 50% of original brightness levels.
     **contrast:**
-    Adjust contrast levels
+    Adjust contrast levels through same scaling mechanic as illumination.
 
 **cropping**
     **width / height:**
-    Crop size
+    Size of patch to crop out of original image. The resulting patch is used
+    for texture analysis and matching. If random crop is set to false, the cropped
+    patch will always be the center patch of the original image. If set to true, the
+    patch will be from a random section of the image.
     **random_crop:**
-    true → random region each run
+    true → random region
     false → center crop
 
 **resampling**
     **width / height:**
-    Resize image
+    Will resize the image being used to a resolution of width * height.
+    This processing step is performed *after* any cropping.
     null = no resizing
     **method**
     Options:
@@ -248,53 +277,11 @@ query_image_processing:
 
 
 6) Target Image Processing
-Applies transformations to the dataset/target images to control how the reference images are prepared for comparison.
-Set to null to disable. Otherwise provide parameter values depending on implementation.
-```yaml
-target_image_processing:
-  preprocessing:
-    gaussian_blur: null
-    gaussian_noise: null
-    illumination: null
-    contrast: null
-    
-  cropping:
-    width: null
-    height: null
-    random_crop: false
-
-  resampling:
-    width: null
-    height: null
-    method: "lanczos"
-```
-**preprocessing**
-    **gaussian_blur:**
-    Simulates blur
-    **gaussian_noise:**
-    Adds random noise
-    **illumination:**
-    Adjust brightness
-    **contrast:**
-    Adjust contrast levels
-
-**cropping**
-    **width / height:**
-    Crop size
-    **random_crop:**
-    true → random region each run
-    false → center crop
-
-**resampling**
-    **width / height:**
-    Resize image
-    null = no resizing
-    **method:**
-    Options:
-        "lanczos" (high quality, slower)
-        "bilinear" (balanced)
-        "nearest" (fast, low quality)
-        "bicubic" (smooth scaling)
+The same transformations and processing steps can be applied to the target image set as the query set, though
+generally these values should be left null in the 'target image processing' section of the configration
+to match query images against raw, known values. However, this can be useful for experimenting with matching against
+different resolutions or matching varying patches of query images against varying patches of target images without
+needing to explicitly curate an additional dataset.
 
 
 7) Data Engineering
@@ -321,14 +308,5 @@ Saves report/visual output
 **visualize:**
 Displays match results in a GUI window
 
-
-9) Logging
-```yaml
-logging:
-  verbose: false
-```
-**verbose:**
-true → prints detailed debugging info
-false → minimal output
-
+Note: results will be saved under a new directory as /results/*config_name*/match_results.csv OR match_results.pdf
 ---

@@ -1,0 +1,57 @@
+data:
+  query_images_folder: LBP_Test_Images/WellDefinedTextures_10Rotations_128
+  target_images_folder: LBP_Test_Images/WellDefinedTextures_10Rotations_128
+
+rng:
+  seed: 42
+
+texture_extraction:
+  local_ternary_pattern:
+    P: 8
+    R: 1.0
+    threshold: 5
+    method: "ror"
+
+matching:
+  metric: "hellinger"
+  tolerance: 1
+  top: 100
+
+query_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
+
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"
+
+target_image_processing:
+  preprocessing:
+    gaussian_blur: null
+    gaussian_noise: null
+    illumination: null
+    contrast: null
+    
+  cropping:
+    width: null
+    height: null
+    random_crop: false
+
+  resampling:
+    width: null
+    height: null
+    method: "lanczos"
+
+output:
+  save_csv: false
+  save_pdf: false
+  visualize: false
